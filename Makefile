@@ -1,4 +1,4 @@
 all:
 	export OMP_DYNAMIC=true
-	gcc -o computeOOP computeOOP.c -fopenmp -lm -Wall -O3
-	./computeOOP
+	gcc -o bondRDF_OOP_entropy bondRDF_OOP_entropy.c -fopenmp -lm -Wall -O3
+	./bondRDF_OOP_entropy

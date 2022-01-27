@@ -57,6 +57,7 @@ typedef struct datafile_atoms
 typedef struct datafile_bonds
 {
 	int id, bondType, atom1, atom2, atom1Type, atom2Type;
+	float x1, y1, z1, x2, y2, z2, xc, yc, zc;
 } DATA_BONDS;
 
 typedef struct datafile_angles
@@ -447,7 +448,7 @@ DUMPFILE_INFO getDumpFileInfo (FILE *inputDumpFile)
 	return dumpfile;
 }
 
-ORDERPARAMETER *printOrderParameter (DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dumpfile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, int currentTimestep, unsigned int nElements)
+ORDERPARAMETER *computeOrderParameter (DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dumpfile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, int currentTimestep, unsigned int nElements)
 {
 	// FILE *allData;
 	// char *allData_string;
@@ -846,7 +847,87 @@ void printDistribution_degrees (DISTRIBUTION *distribution_degrees, DIST_VAR plo
 	fclose (file_distribution_degrees_normalized);
 }
 
-void computeOrderParameter (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors)
+void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, DATA_BONDS *bonds, CONFIG *inputVectors, DIST_VAR plotVars)
+{
+	float xDist = (dumpfile.xhi - dumpfile.xlo), yDist = (dumpfile.yhi - dumpfile.ylo), zDist = (dumpfile.zhi - dumpfile.zlo), simVolume = (xDist * yDist * zDist), bondDensity;
+	int nBonds = 0;
+
+	// Assigning the center of bonds
+	// Finding the bulk density of bond present in inputVectors[1]
+	for (int i = 0; i < datafile.nBonds; ++i)
+	{
+		bonds[i].atom1Type = (int) dumpAtoms[bonds[i].atom1 - 1].atomType;
+		bonds[i].atom2Type = (int) dumpAtoms[bonds[i].atom2 - 1].atomType;
+
+		bonds[i].x1 = dumpAtoms[bonds[i].atom1 - 1].x;
+		bonds[i].y1 = dumpAtoms[bonds[i].atom1 - 1].y;
+		bonds[i].z1 = dumpAtoms[bonds[i].atom1 - 1].z;
+
+		bonds[i].x2 = dumpAtoms[bonds[i].atom2 - 1].x;
+		bonds[i].y2 = dumpAtoms[bonds[i].atom2 - 1].y;
+		bonds[i].z2 = dumpAtoms[bonds[i].atom2 - 1].z;
+
+		bonds[i].xc = (bonds[i].x1 + bonds[i].x2) / 2;
+		bonds[i].yc = (bonds[i].y1 + bonds[i].y2) / 2;
+		bonds[i].zc = (bonds[i].z1 + bonds[i].z2) / 2;
+
+		if ((bonds[i].atom1Type == inputVectors[1].atom1 && bonds[i].atom2Type == inputVectors[1].atom2) || (bonds[i].atom2Type == inputVectors[1].atom1 && bonds[i].atom1Type == inputVectors[1].atom2))
+			nBonds++;
+	}
+
+	bondDensity = (float) nBonds / simVolume;
+
+	// printf("bondDensity: %f\n", bondDensity);
+
+	// Computing bondRDF
+	float binSize_dist_RDF = 0.5, binStart_dist_RDF = 0, binEnd_dist_RDF, distance;
+	int nBins_dist_RDF = (int) (plotVars.maxDist / binSize_dist_RDF);
+	int progress = 0;
+	int *nBonds_inBin_dist_RDF;
+	nBonds_inBin_dist_RDF = (int *) calloc (nBins_dist_RDF, sizeof (int));
+	float *nBonds_inBin_dist_RDF_float;
+	nBonds_inBin_dist_RDF_float = (float *) malloc (nBins_dist_RDF * sizeof (float));
+
+	omp_set_num_threads (3);
+	#pragma omp parallel for
+	for (int i = 0; i < datafile.nBonds; ++i)
+	{
+		progress++;
+		printf("Computing RDF between specified bonds... %d/%d      \r", progress, datafile.nBonds);
+		fflush (stdout);
+
+		for (int j = 0; j < datafile.nBonds; ++j)
+		{
+			// If i = j, then distance = 0.0
+			// neglect the bond pairs where the distance = 0.0
+			distance = sqrt (pow ((bonds[i].xc - bonds[j].xc), 2) + pow ((bonds[i].yc - bonds[j].yc), 2) + pow ((bonds[i].zc - bonds[j].zc), 2));
+			binStart_dist_RDF = 0.0;
+
+			for (int k = 0; k < nBins_dist_RDF; ++k)
+			{
+				binEnd_dist_RDF = binStart_dist_RDF + binSize_dist_RDF;
+
+				if (distance > 0 && distance <= binEnd_dist_RDF)
+				{
+					nBonds_inBin_dist_RDF[k]++;
+					nBonds_inBin_dist_RDF_float[k] = (float) nBonds_inBin_dist_RDF[k] * 3.0 / 4.0 * 3.14 * pow (binEnd_dist_RDF, 3);
+				}
+
+				binStart_dist_RDF = binEnd_dist_RDF;
+			}
+		}
+	}
+
+	printf("\n");
+
+	for (int i = 0; i < nBins_dist_RDF; ++i)
+	{
+		printf("%d %f\n", nBonds_inBin_dist_RDF[i], (float) nBonds_inBin_dist_RDF_float[i] / bondDensity);
+		sleep (1);
+	}
+}
+
+void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors)
 {
 	DUMPFILE_INFO dumpfile;
 	dumpfile = getDumpFileInfo (inputDumpFile);
@@ -909,20 +990,25 @@ void computeOrderParameter (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BO
 			printf("Memory allocated successfully...\n");
 		}
 
+		// Processing loop
 		if (currentDumpstep > 2 && nElements > 0 && currentLine == 2)
 		{
 			sscanf (lineString, "%d", &currentTimestep);
 			printf("Scanning timestep: %d...               \n", currentTimestep);
 			fflush (stdout); 
 
-			allData_array = printOrderParameter (dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
-			/*
-			 * Using the allData_array, compute the frequency distribution of order parameter (for various distances).
-			 * In a similar manner, calculate the frequency distribution of theta (angle between the two vectors of interest), again for various distances.
-			 */
+			// Calculate RDF for the bonds in config file
+			// Set the plotVars.binSize_dist based on bondRDF
+			// bondRDF must be computed before computing the order parameter
+			// In order to create bondRDF, coords information must be saved for all the bonds
+			computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars);
+
+			allData_array = computeOrderParameter (dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
 
 			computeDistribution_OOP (allData_array, plotVars, &distribution_OOP);
 			computeDistribution_theta (allData_array, plotVars, &distribution_degrees);
+
+			// Calculate entropy here, based on RDF
 
 			isTimestep = 0;
 		}
@@ -945,14 +1031,9 @@ void computeOrderParameter (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BO
 				&dumpAtoms[currentLine - 10].z);
 		}
 
-		// if (currentLine == (9 + dumpfile.nAtoms))
-		// 	isTimestep = 1;
-
 		currentLine++;
 	}
 
-	// TODO:
-	// At the end of complete scan, print the distribution arrays in proper format.
 	printDistribution_OOP (distribution_OOP, plotVars);
 	printDistribution_degrees (distribution_degrees, plotVars);
 }
@@ -990,7 +1071,7 @@ int main(int argc, char const *argv[])
 	CONFIG *inputVectors;
 	inputVectors = readConfig (inputConfigFile);
 
-	computeOrderParameter (inputDumpFile, datafile, bonds, inputVectors);
+	processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors);
 
 	return 0;
 }
