@@ -856,21 +856,6 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 	// Finding the bulk density of bond present in inputVectors[1]
 	for (int i = 0; i < datafile.nBonds; ++i)
 	{
-		bonds[i].atom1Type = (int) dumpAtoms[bonds[i].atom1 - 1].atomType;
-		bonds[i].atom2Type = (int) dumpAtoms[bonds[i].atom2 - 1].atomType;
-
-		bonds[i].x1 = dumpAtoms[bonds[i].atom1 - 1].x;
-		bonds[i].y1 = dumpAtoms[bonds[i].atom1 - 1].y;
-		bonds[i].z1 = dumpAtoms[bonds[i].atom1 - 1].z;
-
-		bonds[i].x2 = dumpAtoms[bonds[i].atom2 - 1].x;
-		bonds[i].y2 = dumpAtoms[bonds[i].atom2 - 1].y;
-		bonds[i].z2 = dumpAtoms[bonds[i].atom2 - 1].z;
-
-		bonds[i].xc = (bonds[i].x1 + bonds[i].x2) / 2;
-		bonds[i].yc = (bonds[i].y1 + bonds[i].y2) / 2;
-		bonds[i].zc = (bonds[i].z1 + bonds[i].z2) / 2;
-
 		if ((bonds[i].atom1Type == inputVectors[1].atom1 && bonds[i].atom2Type == inputVectors[1].atom2) || (bonds[i].atom2Type == inputVectors[1].atom1 && bonds[i].atom1Type == inputVectors[1].atom2))
 			nBonds++;
 	}
@@ -896,25 +881,40 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 		printf("Computing RDF between specified bonds... %d/%d      \r", progress, datafile.nBonds);
 		fflush (stdout);
 
-		for (int j = 0; j < datafile.nBonds; ++j)
+		if ((bonds[i].atom1Type == inputVectors[0].atom1 && bonds[i].atom2Type == inputVectors[0].atom2) || (bonds[i].atom2Type == inputVectors[0].atom1 && bonds[i].atom1Type == inputVectors[0].atom2))
 		{
-			// If i = j, then distance = 0.0
-			// neglect the bond pairs where the distance = 0.0
-			distance = sqrt (pow ((bonds[i].xc - bonds[j].xc), 2) + pow ((bonds[i].yc - bonds[j].yc), 2) + pow ((bonds[i].zc - bonds[j].zc), 2));
-			binStart_dist_RDF = 0.0;
+			bonds[i].atom1Type = (int) dumpAtoms[bonds[i].atom1 - 1].atomType; bonds[i].atom2Type = (int) dumpAtoms[bonds[i].atom2 - 1].atomType;
+			bonds[i].x1 = dumpAtoms[bonds[i].atom1 - 1].x; bonds[i].y1 = dumpAtoms[bonds[i].atom1 - 1].y; bonds[i].z1 = dumpAtoms[bonds[i].atom1 - 1].z;
+			bonds[i].x2 = dumpAtoms[bonds[i].atom2 - 1].x; bonds[i].y2 = dumpAtoms[bonds[i].atom2 - 1].y; bonds[i].z2 = dumpAtoms[bonds[i].atom2 - 1].z;
+			bonds[i].xc = (bonds[i].x1 + bonds[i].x2) / 2; bonds[i].yc = (bonds[i].y1 + bonds[i].y2) / 2; bonds[i].zc = (bonds[i].z1 + bonds[i].z2) / 2;
 
-			for (int k = 0; k < nBins_dist_RDF; ++k)
+			for (int j = 0; j < datafile.nBonds; ++j)
 			{
-				binEnd_dist_RDF = binStart_dist_RDF + binSize_dist_RDF;
-
-				if (distance > 0 && distance <= binEnd_dist_RDF && (bonds[i].atom1Type == inputVectors[0].atom1 && bonds[i].atom2Type == inputVectors[0].atom2) || (bonds[i].atom2Type == inputVectors[0].atom1 && bonds[i].atom1Type == inputVectors[0].atom2) && (bonds[j].atom1Type == inputVectors[1].atom1 && bonds[j].atom2Type == inputVectors[1].atom2) || (bonds[j].atom2Type == inputVectors[1].atom1 && bonds[j].atom1Type == inputVectors[1].atom2))
+				if ((bonds[j].atom1Type == inputVectors[1].atom1 && bonds[j].atom2Type == inputVectors[1].atom2) || (bonds[j].atom2Type == inputVectors[1].atom1 && bonds[j].atom1Type == inputVectors[1].atom2))
 				{
-					nBonds_inBin_dist_RDF[k]++;
-				}
+					bonds[j].atom1Type = (int) dumpAtoms[bonds[j].atom1 - 1].atomType; bonds[j].atom2Type = (int) dumpAtoms[bonds[j].atom2 - 1].atomType;
+					bonds[j].x1 = dumpAtoms[bonds[j].atom1 - 1].x; bonds[j].y1 = dumpAtoms[bonds[j].atom1 - 1].y; bonds[j].z1 = dumpAtoms[bonds[j].atom1 - 1].z;
+					bonds[j].x2 = dumpAtoms[bonds[j].atom2 - 1].x; bonds[j].y2 = dumpAtoms[bonds[j].atom2 - 1].y; bonds[j].z2 = dumpAtoms[bonds[j].atom2 - 1].z;
+					bonds[j].xc = (bonds[j].x1 + bonds[j].x2) / 2; bonds[j].yc = (bonds[j].y1 + bonds[j].y2) / 2; bonds[j].zc = (bonds[j].z1 + bonds[j].z2) / 2;
 
-				binStart_dist_RDF = binEnd_dist_RDF;
+					// If i = j, then distance = 0.0
+					// neglect the bond pairs where the distance = 0.0
+					distance = sqrt (pow ((bonds[i].xc - bonds[j].xc), 2) + pow ((bonds[i].yc - bonds[j].yc), 2) + pow ((bonds[i].zc - bonds[j].zc), 2));
+					binStart_dist_RDF = 0.0;
+
+					for (int k = 0; k < nBins_dist_RDF; ++k)
+					{
+						binEnd_dist_RDF = binStart_dist_RDF + binSize_dist_RDF;
+
+						if (distance > 0 && distance <= binEnd_dist_RDF)
+							nBonds_inBin_dist_RDF[k]++;
+
+						binStart_dist_RDF = binEnd_dist_RDF;
+					}
+				}
 			}
 		}
+
 	}
 
 	printf("\n");
