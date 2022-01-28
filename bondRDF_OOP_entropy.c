@@ -907,10 +907,9 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 			{
 				binEnd_dist_RDF = binStart_dist_RDF + binSize_dist_RDF;
 
-				if (distance > 0 && distance <= binEnd_dist_RDF)
+				if (distance > 0 && distance <= binEnd_dist_RDF && (bonds[i].atom1Type == inputVectors[0].atom1 && bonds[i].atom2Type == inputVectors[0].atom2) || (bonds[i].atom2Type == inputVectors[0].atom1 && bonds[i].atom1Type == inputVectors[0].atom2) && (bonds[j].atom1Type == inputVectors[1].atom1 && bonds[j].atom2Type == inputVectors[1].atom2) || (bonds[j].atom2Type == inputVectors[1].atom1 && bonds[j].atom1Type == inputVectors[1].atom2))
 				{
 					nBonds_inBin_dist_RDF[k]++;
-					nBonds_inBin_dist_RDF_float[k] = ((float) nBonds_inBin_dist_RDF[k] * 3.0) / (4.0 * 3.14 * pow (binEnd_dist_RDF, 3));
 				}
 
 				binStart_dist_RDF = binEnd_dist_RDF;
@@ -922,9 +921,23 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 	FILE *file_bondRDF;
 	file_bondRDF = fopen ("bondRDF.output", "w");
 
+	fprintf(stdout, "bondDensity: %f\n", bondDensity);
+	fflush (stdout);
+	sleep (1);
+
+	binStart_dist_RDF = 0.0;
+
 	for (int i = 0; i < nBins_dist_RDF; ++i)
 	{
+		binEnd_dist_RDF = binStart_dist_RDF + binSize_dist_RDF;
+
+		nBonds_inBin_dist_RDF_float[i] = ((float) nBonds_inBin_dist_RDF[i] * 3.0) / (4.0 * 3.14 * pow (binEnd_dist_RDF, 3));
 		fprintf(file_bondRDF, "%d %f\n", nBonds_inBin_dist_RDF[i], (float) nBonds_inBin_dist_RDF_float[i] / bondDensity);
+		fprintf(stdout, "%d %f\n", nBonds_inBin_dist_RDF[i], (float) (nBonds_inBin_dist_RDF_float[i] / bondDensity));
+		fflush (stdout);
+		sleep (1);
+
+		binStart_dist_RDF = binEnd_dist_RDF;
 	}
 }
 
