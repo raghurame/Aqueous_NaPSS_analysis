@@ -862,12 +862,9 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 
 	bondDensity = (float) nBonds / simVolume;
 
-	// printf("bondDensity: %f\n", bondDensity);
-
 	// Computing bondRDF
 	float binSize_dist_RDF = 0.5, binStart_dist_RDF = 0, binEnd_dist_RDF, distance;
 	int nBins_dist_RDF = (int) (plotVars.maxDist / binSize_dist_RDF);
-	int progress = 0;
 	int *nBonds_inBin_dist_RDF;
 	nBonds_inBin_dist_RDF = (int *) calloc (nBins_dist_RDF, sizeof (int));
 	float *nBonds_inBin_dist_RDF_float;
@@ -877,10 +874,6 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 	#pragma omp parallel for
 	for (int i = 0; i < datafile.nBonds; ++i)
 	{
-		progress++;
-		printf("Computing RDF between specified bonds... %d/%d      \r", progress, datafile.nBonds);
-		fflush (stdout);
-
 		if ((bonds[i].atom1Type == inputVectors[0].atom1 && bonds[i].atom2Type == inputVectors[0].atom2) || (bonds[i].atom2Type == inputVectors[0].atom1 && bonds[i].atom1Type == inputVectors[0].atom2))
 		{
 			bonds[i].atom1Type = (int) dumpAtoms[bonds[i].atom1 - 1].atomType; bonds[i].atom2Type = (int) dumpAtoms[bonds[i].atom2 - 1].atomType;
@@ -917,28 +910,21 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 
 	}
 
-	printf("\n");
-	FILE *file_bondRDF;
-	file_bondRDF = fopen ("bondRDF.output", "w");
+	// printf("\n");
+	// FILE *file_bondRDF;
+	// file_bondRDF = fopen ("bondRDF.output", "w");
 
-	fprintf(stdout, "bondDensity: %f\n", bondDensity);
-	fflush (stdout);
-	sleep (1);
+	// binStart_dist_RDF = 0.0;
 
-	binStart_dist_RDF = 0.0;
+	// for (int i = 0; i < nBins_dist_RDF; ++i)
+	// {
+	// 	binEnd_dist_RDF = binStart_dist_RDF + binSize_dist_RDF;
 
-	for (int i = 0; i < nBins_dist_RDF; ++i)
-	{
-		binEnd_dist_RDF = binStart_dist_RDF + binSize_dist_RDF;
+	// 	nBonds_inBin_dist_RDF_float[i] = ((float) nBonds_inBin_dist_RDF[i] * 3.0) / (4.0 * 3.14 * pow (binEnd_dist_RDF, 3));
+	// 	fprintf(file_bondRDF, "%d %f\n", nBonds_inBin_dist_RDF[i], (float) nBonds_inBin_dist_RDF_float[i] / bondDensity);
 
-		nBonds_inBin_dist_RDF_float[i] = ((float) nBonds_inBin_dist_RDF[i] * 3.0) / (4.0 * 3.14 * pow (binEnd_dist_RDF, 3));
-		fprintf(file_bondRDF, "%d %f\n", nBonds_inBin_dist_RDF[i], (float) nBonds_inBin_dist_RDF_float[i] / bondDensity);
-		fprintf(stdout, "%d %f\n", nBonds_inBin_dist_RDF[i], (float) (nBonds_inBin_dist_RDF_float[i] / bondDensity));
-		fflush (stdout);
-		sleep (1);
-
-		binStart_dist_RDF = binEnd_dist_RDF;
-	}
+	// 	binStart_dist_RDF = binEnd_dist_RDF;
+	// }
 }
 
 void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, int nThreads)
