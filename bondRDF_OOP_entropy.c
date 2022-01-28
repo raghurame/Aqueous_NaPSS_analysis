@@ -655,14 +655,14 @@ int getIndex1d (int i, int j, int width)
 	return index1d;
 }
 
-void computeDistribution_OOP (ORDERPARAMETER *allData_array, DIST_VAR plotVars, DISTRIBUTION **distribution_OOP)
+void computeDistribution_OOP (ORDERPARAMETER *allData_array, DIST_VAR plotVars, DISTRIBUTION **distribution_OOP, int nThreads)
 {
 	DIST_VAR currentBounds;
 	currentBounds.binStart_OOP = plotVars.binStart_OOP;
 	currentBounds.binStart_dist = plotVars.binStart_dist;
 
 	// OMP setup
-	omp_set_num_threads(3);
+	omp_set_num_threads(nThreads);
 
 	int index1d;
 
@@ -700,14 +700,14 @@ void computeDistribution_OOP (ORDERPARAMETER *allData_array, DIST_VAR plotVars, 
 	}
 }
 
-void computeDistribution_theta (ORDERPARAMETER *allData_array, DIST_VAR plotVars, DISTRIBUTION **distribution_degrees)
+void computeDistribution_theta (ORDERPARAMETER *allData_array, DIST_VAR plotVars, DISTRIBUTION **distribution_degrees, int nThreads)
 {
 	DIST_VAR currentBounds;
 	currentBounds.binStart_deg = plotVars.binStart_deg;
 	currentBounds.binStart_dist = plotVars.binStart_dist;
 
 	// OMP setup
-	omp_set_num_threads(3);
+	omp_set_num_threads(nThreads);
 
 	int index1d;
 
@@ -847,7 +847,7 @@ void printDistribution_degrees (DISTRIBUTION *distribution_degrees, DIST_VAR plo
 	fclose (file_distribution_degrees_normalized);
 }
 
-void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, DATA_BONDS *bonds, CONFIG *inputVectors, DIST_VAR plotVars)
+void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, DATA_BONDS *bonds, CONFIG *inputVectors, DIST_VAR plotVars, int nThreads)
 {
 	float xDist = (dumpfile.xhi - dumpfile.xlo), yDist = (dumpfile.yhi - dumpfile.ylo), zDist = (dumpfile.zhi - dumpfile.zlo), simVolume = (xDist * yDist * zDist), bondDensity;
 	int nBonds = 0;
@@ -888,7 +888,7 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 	float *nBonds_inBin_dist_RDF_float;
 	nBonds_inBin_dist_RDF_float = (float *) malloc (nBins_dist_RDF * sizeof (float));
 
-	omp_set_num_threads (3);
+	omp_set_num_threads (nThreads);
 	#pragma omp parallel for
 	for (int i = 0; i < datafile.nBonds; ++i)
 	{
@@ -928,7 +928,7 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 	}
 }
 
-void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors)
+void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, int nThreads)
 {
 	DUMPFILE_INFO dumpfile;
 	dumpfile = getDumpFileInfo (inputDumpFile);
@@ -1002,12 +1002,12 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			// Set the plotVars.binSize_dist based on bondRDF
 			// bondRDF must be computed before computing the order parameter
 			// In order to create bondRDF, coords information must be saved for all the bonds
-			computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars);
+			computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads);
 
 			allData_array = computeOrderParameter (dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
 
-			computeDistribution_OOP (allData_array, plotVars, &distribution_OOP);
-			computeDistribution_theta (allData_array, plotVars, &distribution_degrees);
+			computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
+			computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
 
 			// Calculate entropy here, based on RDF
 
@@ -1075,7 +1075,7 @@ int main(int argc, char const *argv[])
 	CONFIG *inputVectors;
 	inputVectors = readConfig (inputConfigFile);
 
-	processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors);
+	processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors, nThreads);
 
 	return 0;
 }
