@@ -847,23 +847,14 @@ void printDistribution_degrees (DISTRIBUTION *distribution_degrees, DIST_VAR plo
 	fclose (file_distribution_degrees_normalized);
 }
 
-void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, DATA_BONDS *bonds, CONFIG *inputVectors, DIST_VAR plotVars, int nThreads)
+void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, DATA_BONDS *bonds, CONFIG *inputVectors, DIST_VAR plotVars, int nThreads, float binSize_dist_RDF, float **bondRDF, int *RDFcounter)
 {
+	*RDFcounter++;
 	float xDist = (dumpfile.xhi - dumpfile.xlo), yDist = (dumpfile.yhi - dumpfile.ylo), zDist = (dumpfile.zhi - dumpfile.zlo), simVolume = (xDist * yDist * zDist), bondDensity;
 	int nBonds = 0;
 
-	// Assigning the center of bonds
-	// Finding the bulk density of bond present in inputVectors[1]
-	for (int i = 0; i < datafile.nBonds; ++i)
-	{
-		if ((bonds[i].atom1Type == inputVectors[1].atom1 && bonds[i].atom2Type == inputVectors[1].atom2) || (bonds[i].atom2Type == inputVectors[1].atom1 && bonds[i].atom1Type == inputVectors[1].atom2))
-			nBonds++;
-	}
-
-	bondDensity = (float) nBonds / simVolume;
-
 	// Computing bondRDF
-	float binSize_dist_RDF = 0.5, binStart_dist_RDF = 0, binEnd_dist_RDF, distance;
+	float binStart_dist_RDF = 0, binEnd_dist_RDF, distance;
 	int nBins_dist_RDF = (int) (plotVars.maxDist / binSize_dist_RDF);
 	int *nBonds_inBin_dist_RDF;
 	nBonds_inBin_dist_RDF = (int *) calloc (nBins_dist_RDF, sizeof (int));
@@ -899,7 +890,7 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 					{
 						binEnd_dist_RDF = binStart_dist_RDF + binSize_dist_RDF;
 
-						if (distance > 0 && distance <= binEnd_dist_RDF)
+						if (distance > 0 && distance <= binEnd_dist_RDF && distance > binStart_dist_RDF)
 							nBonds_inBin_dist_RDF[k]++;
 
 						binStart_dist_RDF = binEnd_dist_RDF;
@@ -908,7 +899,12 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 			}
 		}
 
+		// Finding the bulk density of bond present in inputVectors[1]
+		if ((bonds[i].atom1Type == inputVectors[1].atom1 && bonds[i].atom2Type == inputVectors[1].atom2) || (bonds[i].atom2Type == inputVectors[1].atom1 && bonds[i].atom1Type == inputVectors[1].atom2))
+			nBonds++;
 	}
+
+	bondDensity = (float) nBonds / simVolume;
 
 	// printf("\n");
 	// FILE *file_bondRDF;
@@ -977,6 +973,12 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 
 	printf("\n");
 
+	// bondRDF variable
+	int RDFcounter = 0;
+	float *bondRDF, binSize_dist_RDF = 0.5;
+	int nBins_dist_RDF = (int) (plotVars.maxDist / binSize_dist_RDF);
+	bondRDF = (float *) malloc (nBins_dist_RDF * sizeof (float));
+
 	// Reading and processing dump information
 	while (fgets (lineString, 1000, inputDumpFile) != NULL)
 	{
@@ -1001,7 +1003,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			// Set the plotVars.binSize_dist based on bondRDF
 			// bondRDF must be computed before computing the order parameter
 			// In order to create bondRDF, coords information must be saved for all the bonds
-			computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads);
+			computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter);
 
 			allData_array = computeOrderParameter (dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
 
