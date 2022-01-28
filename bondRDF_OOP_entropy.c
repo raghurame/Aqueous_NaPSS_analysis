@@ -910,7 +910,7 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 				if (distance > 0 && distance <= binEnd_dist_RDF)
 				{
 					nBonds_inBin_dist_RDF[k]++;
-					nBonds_inBin_dist_RDF_float[k] = (float) nBonds_inBin_dist_RDF[k] * 3.0 / 4.0 * 3.14 * pow (binEnd_dist_RDF, 3);
+					nBonds_inBin_dist_RDF_float[k] = ((float) nBonds_inBin_dist_RDF[k] * 3.0) / (4.0 * 3.14 * pow (binEnd_dist_RDF, 3));
 				}
 
 				binStart_dist_RDF = binEnd_dist_RDF;
@@ -919,11 +919,12 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 	}
 
 	printf("\n");
+	FILE *file_bondRDF;
+	file_bondRDF = fopen ("bondRDF.output", "w");
 
 	for (int i = 0; i < nBins_dist_RDF; ++i)
 	{
-		printf("%d %f\n", nBonds_inBin_dist_RDF[i], (float) nBonds_inBin_dist_RDF_float[i] / bondDensity);
-		sleep (1);
+		fprintf(file_bondRDF, "%d %f\n", nBonds_inBin_dist_RDF[i], (float) nBonds_inBin_dist_RDF_float[i] / bondDensity);
 	}
 }
 
@@ -1041,6 +1042,9 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 int main(int argc, char const *argv[])
 {
 	system ("mkdir logs");
+
+	long number_of_processors = sysconf(_SC_NPROCESSORS_ONLN);
+	int nThreads = (int) number_of_processors - 1;
 
 	FILE *inputDumpFile, *inputDataFile, *inputConfigFile;
 	char *inputDumpFilename, *inputDataFilename, *inputConfigFilename;
