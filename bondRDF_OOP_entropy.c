@@ -849,9 +849,9 @@ void printDistribution_degrees (DISTRIBUTION *distribution_degrees, DIST_VAR plo
 
 void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, DATA_BONDS *bonds, CONFIG *inputVectors, DIST_VAR plotVars, int nThreads, float binSize_dist_RDF, float **bondRDF, int *RDFcounter)
 {
-	*RDFcounter++;
+	(*RDFcounter)++;
 	float xDist = (dumpfile.xhi - dumpfile.xlo), yDist = (dumpfile.yhi - dumpfile.ylo), zDist = (dumpfile.zhi - dumpfile.zlo), simVolume = (xDist * yDist * zDist), bondDensity;
-	int nBonds = 0;
+	int nBonds_RDF = 0;
 
 	// Computing bondRDF
 	float binStart_dist_RDF = 0, binEnd_dist_RDF, distance;
@@ -898,13 +898,26 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 				}
 			}
 		}
-
-		// Finding the bulk density of bond present in inputVectors[1]
-		if ((bonds[i].atom1Type == inputVectors[1].atom1 && bonds[i].atom2Type == inputVectors[1].atom2) || (bonds[i].atom2Type == inputVectors[1].atom1 && bonds[i].atom1Type == inputVectors[1].atom2))
-			nBonds++;
 	}
 
-	bondDensity = (float) nBonds / simVolume;
+	for (int i = 0; i < datafile.nBonds; ++i)
+	{
+		// Finding the bulk density of bond present in inputVectors[1]
+		if ((bonds[i].atom1Type == inputVectors[1].atom1 && bonds[i].atom2Type == inputVectors[1].atom2) || (bonds[i].atom2Type == inputVectors[1].atom1 && bonds[i].atom1Type == inputVectors[1].atom2))
+			nBonds_RDF++;		
+	}
+
+	bondDensity = (float) nBonds_RDF * 20.0 / simVolume;
+
+	for (int i = 0; i < nBins_dist_RDF; ++i)
+	{
+		(*bondRDF)[i] += (nBonds_inBin_dist_RDF_float[i] / bondDensity);
+	}
+
+	// printf("nBonds_RDF: %d\n", nBonds_RDF);
+	// printf("bondDensity: %f\n", bondDensity);
+	// fflush (stdout);
+	// sleep (3);
 
 	// printf("\n");
 	// FILE *file_bondRDF;
@@ -916,11 +929,27 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 	// {
 	// 	binEnd_dist_RDF = binStart_dist_RDF + binSize_dist_RDF;
 
-	// 	nBonds_inBin_dist_RDF_float[i] = ((float) nBonds_inBin_dist_RDF[i] * 3.0) / (4.0 * 3.14 * pow (binEnd_dist_RDF, 3));
-	// 	fprintf(file_bondRDF, "%d %f\n", nBonds_inBin_dist_RDF[i], (float) nBonds_inBin_dist_RDF_float[i] / bondDensity);
+	// 	nBonds_inBin_dist_RDF_float[i] = (float) nBonds_inBin_dist_RDF[i] / (4.0 * 3.14 * pow (binStart_dist_RDF, 2) * (binEnd_dist_RDF - binStart_dist_RDF));
+	// 	fprintf(file_bondRDF, "%f %d %f %f %f\n", (binSize_dist_RDF * (float) i), nBonds_inBin_dist_RDF[i], (float) nBonds_inBin_dist_RDF_float[i], (float) nBonds_inBin_dist_RDF_float[i] / bondDensity, (float) nBonds_inBin_dist_RDF_float[i] / (bondDensity * 20));
 
 	// 	binStart_dist_RDF = binEnd_dist_RDF;
 	// }
+
+}
+
+void printBondRDF (float *bondRDF, int RDFcounter, int nBins_dist_RDF, float binSize_dist_RDF)
+{
+	FILE *file_bondRDF;
+	file_bondRDF = fopen ("bondRDF.output", "w");
+
+	for (int i = 0; i < nBins_dist_RDF; ++i)
+	{
+		fprintf(file_bondRDF, "%f %f\n", 
+			binSize_dist_RDF * (float) i,
+			bondRDF[i]/RDFcounter);
+	}
+
+	fclose (file_bondRDF);
 }
 
 void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, int nThreads)
@@ -975,7 +1004,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 
 	// bondRDF variable
 	int RDFcounter = 0;
-	float *bondRDF, binSize_dist_RDF = 0.5;
+	float *bondRDF, binSize_dist_RDF = 0.3;
 	int nBins_dist_RDF = (int) (plotVars.maxDist / binSize_dist_RDF);
 	bondRDF = (float *) malloc (nBins_dist_RDF * sizeof (float));
 
@@ -1038,6 +1067,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 
 	printDistribution_OOP (distribution_OOP, plotVars);
 	printDistribution_degrees (distribution_degrees, plotVars);
+	printBondRDF (bondRDF, RDFcounter, nBins_dist_RDF, binSize_dist_RDF);
 }
 
 int main(int argc, char const *argv[])
