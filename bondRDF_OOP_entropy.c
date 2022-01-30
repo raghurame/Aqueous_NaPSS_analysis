@@ -850,6 +850,7 @@ void printDistribution_degrees (DISTRIBUTION *distribution_degrees, DIST_VAR plo
 void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, DATA_BONDS *bonds, CONFIG *inputVectors, DIST_VAR plotVars, int nThreads, float binSize_dist_RDF, float **bondRDF, int *RDFcounter)
 {
 	(*RDFcounter)++;
+
 	float xDist = (dumpfile.xhi - dumpfile.xlo), yDist = (dumpfile.yhi - dumpfile.ylo), zDist = (dumpfile.zhi - dumpfile.zlo), simVolume = (xDist * yDist * zDist), bondDensity;
 	int nBonds_RDF = 0;
 
@@ -881,8 +882,6 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 					bonds[j].x2 = dumpAtoms[bonds[j].atom2 - 1].x; bonds[j].y2 = dumpAtoms[bonds[j].atom2 - 1].y; bonds[j].z2 = dumpAtoms[bonds[j].atom2 - 1].z;
 					bonds[j].xc = (bonds[j].x1 + bonds[j].x2) / 2; bonds[j].yc = (bonds[j].y1 + bonds[j].y2) / 2; bonds[j].zc = (bonds[j].z1 + bonds[j].z2) / 2;
 
-					// If i = j, then distance = 0.0
-					// neglect the bond pairs where the distance = 0.0
 					distance = sqrt (pow ((bonds[i].xc - bonds[j].xc), 2) + pow ((bonds[i].yc - bonds[j].yc), 2) + pow ((bonds[i].zc - bonds[j].zc), 2));
 					binStart_dist_RDF = 0.0;
 
@@ -890,6 +889,8 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 					{
 						binEnd_dist_RDF = binStart_dist_RDF + binSize_dist_RDF;
 
+						// If i = j, then distance = 0.0
+						// neglect the bond pairs where the distance = 0.0
 						if (distance > 0 && distance <= binEnd_dist_RDF && distance > binStart_dist_RDF)
 							nBonds_inBin_dist_RDF[k]++;
 
@@ -909,32 +910,15 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 
 	bondDensity = (float) nBonds_RDF * 20.0 / simVolume;
 
+	binStart_dist_RDF = 0.0;
+
 	for (int i = 0; i < nBins_dist_RDF; ++i)
 	{
-		(*bondRDF)[i] += (nBonds_inBin_dist_RDF_float[i] / bondDensity);
+		binEnd_dist_RDF = binStart_dist_RDF + binSize_dist_RDF;
+		nBonds_inBin_dist_RDF_float[i] = (float) nBonds_inBin_dist_RDF[i] / (4.0 * 3.14 * pow (binStart_dist_RDF, 2) * (binEnd_dist_RDF - binStart_dist_RDF));
+		(*bondRDF)[i] += (float) nBonds_inBin_dist_RDF_float[i] / bondDensity;
+		binStart_dist_RDF = binEnd_dist_RDF;
 	}
-
-	// printf("nBonds_RDF: %d\n", nBonds_RDF);
-	// printf("bondDensity: %f\n", bondDensity);
-	// fflush (stdout);
-	// sleep (3);
-
-	// printf("\n");
-	// FILE *file_bondRDF;
-	// file_bondRDF = fopen ("bondRDF.output", "w");
-
-	// binStart_dist_RDF = 0.0;
-
-	// for (int i = 0; i < nBins_dist_RDF; ++i)
-	// {
-	// 	binEnd_dist_RDF = binStart_dist_RDF + binSize_dist_RDF;
-
-	// 	nBonds_inBin_dist_RDF_float[i] = (float) nBonds_inBin_dist_RDF[i] / (4.0 * 3.14 * pow (binStart_dist_RDF, 2) * (binEnd_dist_RDF - binStart_dist_RDF));
-	// 	fprintf(file_bondRDF, "%f %d %f %f %f\n", (binSize_dist_RDF * (float) i), nBonds_inBin_dist_RDF[i], (float) nBonds_inBin_dist_RDF_float[i], (float) nBonds_inBin_dist_RDF_float[i] / bondDensity, (float) nBonds_inBin_dist_RDF_float[i] / (bondDensity * 20));
-
-	// 	binStart_dist_RDF = binEnd_dist_RDF;
-	// }
-
 }
 
 void printBondRDF (float *bondRDF, int RDFcounter, int nBins_dist_RDF, float binSize_dist_RDF)
@@ -967,7 +951,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	plotVars.maxDist = sqrt ((hyp1 * hyp1) + (yDist * yDist));
 
 	// Setting the number of bins across distance, degree, and OOP; based on the set bin size. These bin sizes can be adjusted for a smoother distribution curve
-	plotVars.binSize_dist = 4; plotVars.binSize_OOP = 0.01; plotVars.binSize_deg = 3;
+	plotVars.binSize_dist = 2; plotVars.binSize_OOP = 0.01; plotVars.binSize_deg = 3;
 	plotVars.nBins_dist = (((int) plotVars.maxDist) / (int) plotVars.binSize_dist) + 1; plotVars.nBins_OOP = (int) ((1 + 0.5) / plotVars.binSize_OOP) + 1; plotVars.nBins_deg = (180 / (int) plotVars.binSize_deg) + 1;
 
 	// [degrees][distance] and [oop][distance]
@@ -1021,7 +1005,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			printf("Memory allocated successfully...\n");
 		}
 
-		// Processing loop
+		// Main processing loop
 		if (currentDumpstep > 2 && nElements > 0 && currentLine == 2)
 		{
 			sscanf (lineString, "%d", &currentTimestep);
