@@ -938,6 +938,43 @@ void printBondRDF (float *bondRDF, int RDFcounter, int nBins_dist_RDF, float bin
 	fclose (file_bondRDF);
 }
 
+void computeFreeVolume (DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dumpfile, CONFIG *freeVolumeconfig, int nThreads)
+{
+	// Variables regarding probe size
+	float minProbeSize, maxProbeSize, delProbeSize, currentProbeSize;
+	int nBins_probeSweep = (int) ((maxProbeSize - minProbeSize) / delProbeSize) + 1;
+	printf("Enter the minimum size of probe: \t");
+	scanf ("%f", &minProbeSize);
+	printf("Enter the maximum size of probe: \t");
+	scanf ("%f", &maxProbeSize);
+	printf("Enter the del (size) for probe: \t");
+	scanf ("%f", &delProbeSize);
+
+	// Variables regarding 3D probe movement
+	float 
+
+	currentProbeSize = minProbeSize;
+
+	// Probe size is set. It'll vary in a loop, from minimum to maximum size
+	for (int i = 0; i < nBins_probeSweep; ++i)
+	{
+		// With a particular probe size, check all three dimensions
+		for (int i = 0; i < count; ++i)
+		{
+			for (int i = 0; i < count; ++i)
+			{
+				for (int i = 0; i < count; ++i)
+				{
+					/* code */
+				}
+			}
+		}
+		currentProbeSize += delProbeSize;
+		if (currentProbeSize > maxProbeSize)
+			break;
+	}
+}
+
 void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, CONFIG *freeVolumeconfig, int nThreads)
 {
 	DUMPFILE_INFO dumpfile;
@@ -1028,7 +1065,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			// Calculate entropy here, based on RDF
 
 			// Calculate free volume
-			computeFreeVolume (inputDumpFile, dumpfile, freeVolumeconfig, nThreads);
+			computeFreeVolume (dumpAtoms, dumpfile, freeVolumeconfig, nThreads);
 
 			isTimestep = 0;
 		}
