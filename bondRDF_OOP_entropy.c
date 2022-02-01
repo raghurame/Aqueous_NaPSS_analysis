@@ -405,6 +405,8 @@ CONFIG *readConfig (FILE *inputConfigFile)
 		if (lineString[0] != '#')
 		{
 			sscanf (lineString, "%d %d\n", &inputVectors[nLines].atom1, &inputVectors[nLines].atom2);
+			printf("%d %d\n", inputVectors[nLines].atom1, inputVectors[nLines].atom2);
+			sleep (1);
 			nLines++;
 		}
 	}
@@ -936,7 +938,7 @@ void printBondRDF (float *bondRDF, int RDFcounter, int nBins_dist_RDF, float bin
 	fclose (file_bondRDF);
 }
 
-void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, int nThreads)
+void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, CONFIG *freeVolumeconfig, int nThreads)
 {
 	DUMPFILE_INFO dumpfile;
 	dumpfile = getDumpFileInfo (inputDumpFile);
@@ -1025,6 +1027,9 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 
 			// Calculate entropy here, based on RDF
 
+			// Calculate free volume
+			computeFreeVolume (inputDumpFile, dumpfile, freeVolumeconfig, nThreads);
+
 			isTimestep = 0;
 		}
 
@@ -1061,19 +1066,22 @@ int main(int argc, char const *argv[])
 	long number_of_processors = sysconf(_SC_NPROCESSORS_ONLN);
 	int nThreads = (int) number_of_processors - 1;
 
-	FILE *inputDumpFile, *inputDataFile, *inputConfigFile;
-	char *inputDumpFilename, *inputDataFilename, *inputConfigFilename;
+	FILE *inputDumpFile, *inputDataFile, *inputConfigFile, *inputFreevolumeConfigFile;
+	char *inputDumpFilename, *inputDataFilename, *inputConfigFilename, *inputFreevolumeConfigFilename;
 
 	printf("%s\n", "Looking for LAMMPS trajectory file...");
 	inputDumpFilename = getInputFileName ();
 	printf("%s\n", "Looking for LAMMPS data file...");
 	inputDataFilename = getInputFileName ();
-	printf("%s\n", "Looking for input config file...");
+	printf("%s\n", "Looking for input config file (for OOP/bondRDF calculations)...");
 	inputConfigFilename = getInputFileName ();
+	printf("%s\n", "Looking for config file for free volume calculations...");
+	inputFreevolumeConfigFilename = getInputFileName ();
 
 	inputDumpFile = fopen (inputDumpFilename, "r");
 	inputDataFile = fopen (inputDataFilename, "r");
 	inputConfigFile = fopen (inputConfigFilename, "r");
+	inputFreevolumeConfigFile = fopen (inputFreevolumeConfigFilename, "r");
 
 	DATA_ATOMS *atoms;
 	DATA_BONDS *bonds;
@@ -1087,10 +1095,11 @@ int main(int argc, char const *argv[])
 	DUMPFILE_INFO dumpfile;
 	dumpfile = getDumpFileInfo (inputDumpFile);
 
-	CONFIG *inputVectors;
+	CONFIG *inputVectors, *freeVolumeconfig;
 	inputVectors = readConfig (inputConfigFile);
+	freeVolumeconfig = readConfig (inputFreevolumeConfigFile);
 
-	processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors, nThreads);
+	processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors, freeVolumeconfig, nThreads);
 
 	return 0;
 }
