@@ -43,6 +43,7 @@ typedef struct dumpinfo
 typedef struct config
 {
 	int atom1, atom2;
+	float radius;
 } CONFIG;
 
 typedef struct datafile_atoms
@@ -405,13 +406,43 @@ CONFIG *readConfig (FILE *inputConfigFile)
 		if (lineString[0] != '#')
 		{
 			sscanf (lineString, "%d %d\n", &inputVectors[nLines].atom1, &inputVectors[nLines].atom2);
-			printf("%d %d\n", inputVectors[nLines].atom1, inputVectors[nLines].atom2);
-			sleep (1);
 			nLines++;
 		}
 	}
 
 	rewind (inputConfigFile);
+	return inputVectors;
+}
+
+CONFIG *readVWDRadius (FILE *inputVDWConfigFile)
+{
+	rewind (inputVDWConfigFile);
+	CONFIG *inputVectors;
+	char lineString[1000];
+	int nLines = 0;
+
+	while (fgets (lineString, 1000, inputVDWConfigFile) != NULL)
+	{
+		if (lineString[0] != '#')
+		{
+			nLines++;
+		}
+	}
+
+	inputVectors = (CONFIG *) malloc (nLines * sizeof (CONFIG));
+	rewind (inputVDWConfigFile);
+	nLines = 0;
+
+	while (fgets (lineString, 1000, inputVDWConfigFile) != NULL)
+	{
+		if (lineString[0] != '#')
+		{
+			sscanf (lineString, "%d %f\n", &inputVectors[nLines].atom1, &inputVectors[nLines].radius);
+			nLines++;
+		}
+	}
+
+	rewind (inputVDWConfigFile);
 	return inputVectors;
 }
 
@@ -938,44 +969,95 @@ void printBondRDF (float *bondRDF, int RDFcounter, int nBins_dist_RDF, float bin
 	fclose (file_bondRDF);
 }
 
-void computeFreeVolume (DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dumpfile, CONFIG *freeVolumeconfig, int nThreads)
+typedef struct freeVolumeVars
 {
-	// Variables regarding probe size
 	float minProbeSize, maxProbeSize, delProbeSize, currentProbeSize;
-	int nBins_probeSweep = (int) ((maxProbeSize - minProbeSize) / delProbeSize) + 1;
-	printf("Enter the minimum size of probe: \t");
-	scanf ("%f", &minProbeSize);
-	printf("Enter the maximum size of probe: \t");
-	scanf ("%f", &maxProbeSize);
-	printf("Enter the del (size) for probe: \t");
-	scanf ("%f", &delProbeSize);
+	int nBins_probeSweep;
+	float xLength, yLength, zLength;
+	int nBins_dist_x, nBins_dist_y, nBins_dist_z;
+	float delDistance;
+} FREEVOLUME_VARS;
+
+FREEVOLUME_VARS getFreeVolumeVars (DUMPFILE_INFO dumpfile)
+{
+	FREEVOLUME_VARS freeVolumeVars;
+
+	// Variables regarding probe size
+	printf("Enter the minimum size of probe:\t");
+	scanf ("%f", &freeVolumeVars.minProbeSize);
+	printf("Enter the maximum size of probe:\t");
+	scanf ("%f", &freeVolumeVars.maxProbeSize);
+	printf("Enter the del (size) for probe:\t");
+	scanf ("%f", &freeVolumeVars.delProbeSize);
+
+	freeVolumeVars.nBins_probeSweep = (int) ((freeVolumeVars.maxProbeSize - freeVolumeVars.minProbeSize) / freeVolumeVars.delProbeSize) + 1;
 
 	// Variables regarding 3D probe movement
-	float 
+	// delDistance can usually be set at 1/4th of probe radius
+	freeVolumeVars.xLength = (dumpfile.xhi - dumpfile.xlo); freeVolumeVars.yLength = (dumpfile.yhi - dumpfile.ylo); freeVolumeVars.zLength = (dumpfile.zhi - dumpfile.zlo);
 
-	currentProbeSize = minProbeSize;
+	return freeVolumeVars;
+}
+
+void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dumpfile, CONFIG *freeVolumeconfig, CONFIG *vwdSize, int nThreads)
+{
+	DATA_ATOMS probePosition;
+	freeVolumeVars.currentProbeSize = freeVolumeVars.minProbeSize;
 
 	// Probe size is set. It'll vary in a loop, from minimum to maximum size
-	for (int i = 0; i < nBins_probeSweep; ++i)
+	for (int i = 0; i < freeVolumeVars.nBins_probeSweep; ++i)
 	{
+		freeVolumeVars.delDistance = 0.25 * freeVolumeVars.currentProbeSize;
+		freeVolumeVars.nBins_dist_x = (int) (freeVolumeVars.xLength / freeVolumeVars.delDistance);
+		freeVolumeVars.nBins_dist_y = (int) (freeVolumeVars.yLength / freeVolumeVars.delDistance);
+		freeVolumeVars.nBins_dist_z = (int) (freeVolumeVars.zLength / freeVolumeVars.delDistance);
+		printf("\nnBins_dist_x: %d; nBins_dist_y: %d; nBins_dist_z: %d\n", freeVolumeVars.nBins_dist_x, freeVolumeVars.nBins_dist_y, freeVolumeVars.nBins_dist_z);
+		sleep (1);
+
+		// Reset the position at the start of every probe sweep
+		// Occurs whenever the probe size is changed
+		probePosition.x = dumpfile.xlo; probePosition.y = dumpfile.ylo; probePosition.z = dumpfile.zlo;
+
+		// Initialize a 3D array
+		int nOccupied[freeVolumeVars.nBins_dist_x][freeVolumeVars.nBins_dist_y][freeVolumeVars.nBins_dist_z], nUnoccupied[freeVolumeVars.nBins_dist_x][freeVolumeVars.nBins_dist_y][freeVolumeVars.nBins_dist_z];
+
 		// With a particular probe size, check all three dimensions
-		for (int i = 0; i < count; ++i)
+		probePosition.x = dumpfile.xlo;
+		for (int j = 0; j < freeVolumeVars.nBins_dist_x; ++j)
 		{
-			for (int i = 0; i < count; ++i)
+			probePosition.y = dumpfile.ylo;
+			for (int k = 0; k < freeVolumeVars.nBins_dist_y; ++k)
 			{
-				for (int i = 0; i < count; ++i)
+				probePosition.z = dumpfile.zlo;
+				for (int l = 0; l < freeVolumeVars.nBins_dist_z; ++l)
 				{
-					/* code */
+					// Go through every atom and check the following condition
+					// If freeVolume.currentProbeSize + VDW radius of that atom < distance between the probe and that atom, then the volume is occupied
+					// If the sum is larger than the distance, then the volume is not occupied.
+					for (int i = 0; i < dumpfile.nAtoms; ++i)
+					{
+						printf("%d %d %f %f %f => %d %f\n", dumpAtoms[i].id, dumpAtoms[i].atomType, dumpAtoms[i].x, dumpAtoms[i].y, dumpAtoms[i].z, vwdSize[dumpAtoms[i].atomType - 1].atom1, vwdSize[dumpAtoms[i].atomType - 1].radius);
+						sleep (1);
+					}
+
+
+					printf("%f %f %f\r", probePosition.x, probePosition.y, probePosition.z);
+					fflush (stdout);
+					usleep (10000);
+					probePosition.z += freeVolumeVars.delDistance;
 				}
+				probePosition.y += freeVolumeVars.delDistance;
 			}
+			probePosition.x += freeVolumeVars.delDistance;
 		}
-		currentProbeSize += delProbeSize;
-		if (currentProbeSize > maxProbeSize)
+
+		freeVolumeVars.currentProbeSize += freeVolumeVars.delProbeSize;
+		if (freeVolumeVars.currentProbeSize > freeVolumeVars.maxProbeSize)
 			break;
 	}
 }
 
-void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, CONFIG *freeVolumeconfig, int nThreads)
+void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, CONFIG *freeVolumeconfig, CONFIG *vwdSize, int nThreads)
 {
 	DUMPFILE_INFO dumpfile;
 	dumpfile = getDumpFileInfo (inputDumpFile);
@@ -1031,6 +1113,9 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	int nBins_dist_RDF = (int) (plotVars.maxDist / binSize_dist_RDF);
 	bondRDF = (float *) malloc (nBins_dist_RDF * sizeof (float));
 
+	// Free volume calculations - variable set
+	FREEVOLUME_VARS freeVolumeVars;
+
 	// Reading and processing dump information
 	while (fgets (lineString, 1000, inputDumpFile) != NULL)
 	{
@@ -1042,6 +1127,8 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			printf("Allocating memory for %lu elements...\n", nElements);
 			allData_array = (ORDERPARAMETER *) malloc (nElements * sizeof (ORDERPARAMETER));
 			printf("Memory allocated successfully...\n");
+
+			freeVolumeVars = getFreeVolumeVars (dumpfile);
 		}
 
 		// Main processing loop
@@ -1055,17 +1142,17 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			// Set the plotVars.binSize_dist based on bondRDF
 			// bondRDF must be computed before computing the order parameter
 			// In order to create bondRDF, coords information must be saved for all the bonds
-			computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter);
+			// computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter);
 
-			allData_array = computeOrderParameter (dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
+			// allData_array = computeOrderParameter (dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
 
-			computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
-			computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
+			// computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
+			// computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
 
 			// Calculate entropy here, based on RDF
 
 			// Calculate free volume
-			computeFreeVolume (dumpAtoms, dumpfile, freeVolumeconfig, nThreads);
+			computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, nThreads);
 
 			isTimestep = 0;
 		}
@@ -1103,8 +1190,8 @@ int main(int argc, char const *argv[])
 	long number_of_processors = sysconf(_SC_NPROCESSORS_ONLN);
 	int nThreads = (int) number_of_processors - 1;
 
-	FILE *inputDumpFile, *inputDataFile, *inputConfigFile, *inputFreevolumeConfigFile;
-	char *inputDumpFilename, *inputDataFilename, *inputConfigFilename, *inputFreevolumeConfigFilename;
+	FILE *inputDumpFile, *inputDataFile, *inputConfigFile, *inputFreevolumeConfigFile, *inputVDWConfigFile;
+	char *inputDumpFilename, *inputDataFilename, *inputConfigFilename, *inputFreevolumeConfigFilename, *inputVDWConfigFilename;
 
 	printf("%s\n", "Looking for LAMMPS trajectory file...");
 	inputDumpFilename = getInputFileName ();
@@ -1114,11 +1201,14 @@ int main(int argc, char const *argv[])
 	inputConfigFilename = getInputFileName ();
 	printf("%s\n", "Looking for config file for free volume calculations...");
 	inputFreevolumeConfigFilename = getInputFileName ();
+	printf("%s\n", "Looking for config file containing VWD radii...");
+	inputVDWConfigFilename = getInputFileName ();
 
 	inputDumpFile = fopen (inputDumpFilename, "r");
 	inputDataFile = fopen (inputDataFilename, "r");
 	inputConfigFile = fopen (inputConfigFilename, "r");
 	inputFreevolumeConfigFile = fopen (inputFreevolumeConfigFilename, "r");
+	inputVDWConfigFile = fopen (inputVDWConfigFilename, "r");
 
 	DATA_ATOMS *atoms;
 	DATA_BONDS *bonds;
@@ -1132,11 +1222,12 @@ int main(int argc, char const *argv[])
 	DUMPFILE_INFO dumpfile;
 	dumpfile = getDumpFileInfo (inputDumpFile);
 
-	CONFIG *inputVectors, *freeVolumeconfig;
+	CONFIG *inputVectors, *freeVolumeconfig, *vwdSize;
 	inputVectors = readConfig (inputConfigFile);
 	freeVolumeconfig = readConfig (inputFreevolumeConfigFile);
+	vwdSize = readVWDRadius (inputVDWConfigFile);
 
-	processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors, freeVolumeconfig, nThreads);
+	processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors, freeVolumeconfig, vwdSize, nThreads);
 
 	return 0;
 }
