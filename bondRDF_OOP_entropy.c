@@ -1004,6 +1004,8 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 	DATA_ATOMS probePosition;
 	freeVolumeVars.currentProbeSize = freeVolumeVars.minProbeSize;
 
+	float distance, x1, y1, z1, x2, y2, z2;
+
 	// Probe size is set. It'll vary in a loop, from minimum to maximum size
 	for (int i = 0; i < freeVolumeVars.nBins_probeSweep; ++i)
 	{
@@ -1019,7 +1021,9 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 		probePosition.x = dumpfile.xlo; probePosition.y = dumpfile.ylo; probePosition.z = dumpfile.zlo;
 
 		// Initialize a 3D array
-		int nOccupied[freeVolumeVars.nBins_dist_x][freeVolumeVars.nBins_dist_y][freeVolumeVars.nBins_dist_z], nUnoccupied[freeVolumeVars.nBins_dist_x][freeVolumeVars.nBins_dist_y][freeVolumeVars.nBins_dist_z];
+		// If the array is 1, then the space is occupied.
+		// Else, if the array is 0, the space is not occupied
+		int isOccupied[freeVolumeVars.nBins_dist_x][freeVolumeVars.nBins_dist_y][freeVolumeVars.nBins_dist_z];
 
 		// With a particular probe size, check all three dimensions
 		probePosition.x = dumpfile.xlo;
@@ -1032,12 +1036,24 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 				for (int l = 0; l < freeVolumeVars.nBins_dist_z; ++l)
 				{
 					// Go through every atom and check the following condition
-					// If freeVolume.currentProbeSize + VDW radius of that atom < distance between the probe and that atom, then the volume is occupied
+					// If freeVolume.currentProbeSize + VDW radius of that atom > distance between the probe and that atom, then the volume is occupied
 					// If the sum is larger than the distance, then the volume is not occupied.
 					for (int i = 0; i < dumpfile.nAtoms; ++i)
 					{
-						printf("%d %d %f %f %f => %d %f\n", dumpAtoms[i].id, dumpAtoms[i].atomType, dumpAtoms[i].x, dumpAtoms[i].y, dumpAtoms[i].z, vwdSize[dumpAtoms[i].atomType - 1].atom1, vwdSize[dumpAtoms[i].atomType - 1].radius);
-						sleep (1);
+						x1 = dumpAtoms[i].x;
+						y1 = dumpAtoms[i].y;
+						z1 = dumpAtoms[i].z;
+
+						x2 = probePosition.x;
+						y2 = probePosition.y;
+						z2 = probePosition.z;
+
+						distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
+
+						if (distance < (freeVolume.currentProbeSize + vwdSize[dumpAtoms[i].atomType - 1].radius))
+							isOccupied[j][k][l] = 1;
+						else
+							isOccupied[j][k][l] = 0;
 					}
 
 
