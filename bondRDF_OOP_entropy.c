@@ -701,6 +701,11 @@ int getIndex1d (int i, int j, int width)
 	return index1d;
 }
 
+int getIndex1d_from3d (int x, int xWidth, int y, int yWidth, int z, int zWidth)
+{
+	return ((z * yWidth * xWidth) + (y * xWidth) + x);
+}
+
 void computeDistribution_OOP (ORDERPARAMETER *allData_array, DIST_VAR plotVars, DISTRIBUTION **distribution_OOP, int nThreads)
 {
 	DIST_VAR currentBounds;
@@ -989,6 +994,9 @@ typedef struct freeVolumeVars
 	float xLength, yLength, zLength;
 	int nBins_dist_x, nBins_dist_y, nBins_dist_z;
 	float delDistance;
+
+	float binStart_dist, binEnd_dist, binSize_dist;
+	int nBins_dist;
 } FREEVOLUME_VARS;
 
 FREEVOLUME_VARS getFreeVolumeVars (DUMPFILE_INFO dumpfile)
@@ -1009,6 +1017,13 @@ FREEVOLUME_VARS getFreeVolumeVars (DUMPFILE_INFO dumpfile)
 	// delDistance can usually be set at 1/4th of probe radius
 	freeVolumeVars.xLength = (dumpfile.xhi - dumpfile.xlo); freeVolumeVars.yLength = (dumpfile.yhi - dumpfile.ylo); freeVolumeVars.zLength = (dumpfile.zhi - dumpfile.zlo);
 
+	// Variables for calculating free volume distribution
+	freeVolumeVars.binStart_dist = 0;
+	printf("Free volume distribution will be calculated from the center of respective atoms\n\n");
+	printf("Enter the max. distance to consider for free volume distribution (float type):\t"); scanf ("%f", &freeVolumeVars.binEnd_dist);
+	printf("Enter the bin size (number of bins will be calculated based on max. distance and bin size):\t"); scanf ("%f", &freeVolumeVars.binSize_dist);
+	freeVolumeVars.nBins_dist = (int) ((freeVolumeVars.binEnd_dist - freeVolumeVars.binStart_dist) / freeVolumeVars.binSize_dist) + 1;
+
 	return freeVolumeVars;
 }
 
@@ -1023,14 +1038,15 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 	DATA_ATOMS probePosition;
 	freeVolumeVars.currentProbeSize = freeVolumeVars.minProbeSize;
 
-	FREEVOLUME_DISTRIBUTION *freeVolumeDist;
-	freeVolumeDist = (FREEVOLUME_DISTRIBUTION *) malloc (entries.nLines_freeVolumeconfig * sizeof (FREEVOLUME_DISTRIBUTION));
+	// FREEVOLUME_DISTRIBUTION *freeVolumeDist;
+	// freeVolumeDist = (FREEVOLUME_DISTRIBUTION *) malloc (entries.nLines_freeVolumeconfig * sizeof (FREEVOLUME_DISTRIBUTION));
 
 	float distance, x1, y1, z1, x2, y2, z2;
+	int index1d;
 
 	// Probe size is set. It'll vary in a loop, from minimum to maximum size
 	for (int i = 0; i < freeVolumeVars.nBins_probeSweep; ++i)
-	{
+	{		
 		freeVolumeVars.delDistance = 0.25 * freeVolumeVars.currentProbeSize;
 		freeVolumeVars.nBins_dist_x = (int) (freeVolumeVars.xLength / freeVolumeVars.delDistance);
 		freeVolumeVars.nBins_dist_y = (int) (freeVolumeVars.yLength / freeVolumeVars.delDistance);
@@ -1043,7 +1059,9 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 		// Initialize a 3D array
 		// If the array is 1, then the space is occupied.
 		// Else, if the array is 0, the space is not occupied
-		int isOccupied[freeVolumeVars.nBins_dist_x][freeVolumeVars.nBins_dist_y][freeVolumeVars.nBins_dist_z];
+
+		int *isOccupied;
+		isOccupied = (int *) malloc (freeVolumeVars.nBins_dist_x * freeVolumeVars.nBins_dist_y * freeVolumeVars.nBins_dist_z * sizeof (int));
 
 		// With a particular probe size, check all three dimensions
 		probePosition.x = dumpfile.xlo;
@@ -1056,15 +1074,18 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 				for (int l = 0; l < freeVolumeVars.nBins_dist_z; ++l)
 				{
 					for (int m = 0; m < dumpfile.nAtoms; ++m)
-					{
+					{		
 						x1 = dumpAtoms[i].x; y1 = dumpAtoms[i].y; z1 = dumpAtoms[i].z;
 						x2 = probePosition.x; y2 = probePosition.y; z2 = probePosition.z;
 						distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
 
+						index1d = getIndex1d_from3d (j, freeVolumeVars.nBins_dist_x, k, freeVolumeVars.nBins_dist_y, l, freeVolumeVars.nBins_dist_z);
+
 						if (distance < (freeVolumeVars.currentProbeSize + vwdSize[dumpAtoms[i].atomType - 1].radius))
-							isOccupied[j][k][l] = 1;
+							isOccupied[index1d] = 1;
 						else
-							isOccupied[j][k][l] = 0;
+							isOccupied[index1d] = 0;
+
 					}
 					probePosition.z += freeVolumeVars.delDistance;
 				}
@@ -1084,32 +1105,46 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 		// At the end of processing the traj file, read the output file containing the free volume distribution, create time averaged value.
 		// 
 
-		for (int j = 0; j < dumpfile.nAtoms; ++j)
+		// Creating an outer loop, for various atom types
+		for (int j = 0; j < entries.nLines_freeVolumeconfig; ++j)
 		{
-			x1 = dumpAtoms[i].x; y1 = dumpAtoms[i].y; z1 = dumpAtoms[i].z;
+			// printf("%d\n", freeVolumeconfig[j].atom1);
+			// sleep (1);
 
-			probePosition.x = dumpfile.xlo;
-			for (int k = 0; k < freeVolumeVars.nBins_dist_x; ++k)
+			// Checking all atoms in dumpfile
+			for (int k = 0; k < dumpfile.nAtoms; ++k)
 			{
-				probePosition.y = dumpfile.ylo;
-				for (int l = 0; l < freeVolumeVars.nBins_dist_y; ++l)
+				x1 = dumpAtoms[i].x; y1 = dumpAtoms[i].y; z1 = dumpAtoms[i].z;
+
+				// Going through all positions of the probe
+				probePosition.x = dumpfile.xlo;
+				for (int l = 0; l < freeVolumeVars.nBins_dist_x; ++l)
 				{
-					probePosition.z = dumpfile.zlo;
-					for (int m = 0; m < freeVolumeVars.nBins_dist_z; ++m)
+					probePosition.y = dumpfile.ylo;
+					for (int m = 0; m < freeVolumeVars.nBins_dist_y; ++m)
 					{
-						x2 = probePosition.x; y2 = probePosition.y; z2 = probePosition.z;
-						distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
+						probePosition.z = dumpfile.zlo;
+						for (int n = 0; n < freeVolumeVars.nBins_dist_z; ++n)
+						{
+							// Storing the position of probe
+							// and checking the distance between the probe and the atoms
+							x2 = probePosition.x; y2 = probePosition.y; z2 = probePosition.z;
+							distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
+						}
+						probePosition.z += freeVolumeVars.delDistance;
 					}
-					probePosition.z += freeVolumeVars.delDistance;
+					probePosition.y += freeVolumeVars.delDistance;
 				}
-				probePosition.y += freeVolumeVars.delDistance;
+				probePosition.x += freeVolumeVars.delDistance;
 			}
-			probePosition.x += freeVolumeVars.delDistance;
 		}
+
 
 		freeVolumeVars.currentProbeSize += freeVolumeVars.delProbeSize;
 		if (freeVolumeVars.currentProbeSize > freeVolumeVars.maxProbeSize)
 			break;
+
+		free (isOccupied);
 	}
 }
 
@@ -1207,7 +1242,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 
 			// Calculate entropy here, based on RDF
 
-			// Calculate free volume
+			// Calculate free volume	
 			computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, nThreads);
 
 			isTimestep = 0;
@@ -1286,7 +1321,7 @@ int main(int argc, char const *argv[])
 	freeVolumeconfig = readConfig (inputFreevolumeConfigFile, &nLines_freeVolumeconfig);
 	vwdSize = readVWDRadius (inputVDWConfigFile, &nLines_vwdSize);
 
-	entries.nLines_inputVectors = nLines_inputVectors; entries.freeVolumeconfig = nLines_freeVolumeconfig; entries.vwdSize = nLines_vwdSize;
+	entries.nLines_inputVectors = nLines_inputVectors; entries.nLines_freeVolumeconfig = nLines_freeVolumeconfig; entries.nLines_vwdSize = nLines_vwdSize;
 
 	processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors, freeVolumeconfig, vwdSize, entries, nThreads);
 
