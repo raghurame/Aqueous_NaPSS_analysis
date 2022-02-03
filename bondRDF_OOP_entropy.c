@@ -1038,8 +1038,19 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 	DATA_ATOMS probePosition;
 	freeVolumeVars.currentProbeSize = freeVolumeVars.minProbeSize;
 
-	// FREEVOLUME_DISTRIBUTION *freeVolumeDist;
-	// freeVolumeDist = (FREEVOLUME_DISTRIBUTION *) malloc (entries.nLines_freeVolumeconfig * sizeof (FREEVOLUME_DISTRIBUTION));
+	FREEVOLUME_DISTRIBUTION *freeVolumeDist;
+	freeVolumeDist = (FREEVOLUME_DISTRIBUTION *) malloc (freeVolumeVars.nBins_dist * sizeof (FREEVOLUME_DISTRIBUTION));
+
+	freeVolumeDist[0].binStart_dist = freeVolumeVars.binStart_dist;
+	freeVolumeDist[0].binEnd_dist = freeVolumeDist[0].binStart_dist + freeVolumeVars.binSize_dist;
+	// Setting bin values for free volume distribution
+	for (int i = 1; i < freeVolumeVars.nBins_dist; ++i)
+	{
+		freeVolumeDist[i].binStart_dist = freeVolumeDist[i - 1].binEnd_dist;
+		freeVolumeDist[i].binEnd_dist = freeVolumeDist[i].binStart_dist + freeVolumeVars.binSize_dist;
+		printf("%f %f\n", freeVolumeDist[i].binStart_dist, freeVolumeDist[i].binEnd_dist);
+		sleep (1);
+	}
 
 	float distance, x1, y1, z1, x2, y2, z2;
 	int index1d;
@@ -1108,35 +1119,49 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 		// Creating an outer loop, for various atom types
 		for (int j = 0; j < entries.nLines_freeVolumeconfig; ++j)
 		{
+			char *freeVolumeLogfilename;
+			freeVolumeLogfilename = (char *) malloc (50 * sizeof (char));
+			FILE *freeVolumeLogfile;
+
+			sprintf (freeVolumeLogfilename, "logs/freeVolume_%d.log", freeVolumeconfig[j].atom1);
+			freeVolumeLogfile = fopen (freeVolumeLogfilename, "a");
 			// printf("%d\n", freeVolumeconfig[j].atom1);
 			// sleep (1);
 
 			// Checking all atoms in dumpfile
 			for (int k = 0; k < dumpfile.nAtoms; ++k)
 			{
-				x1 = dumpAtoms[i].x; y1 = dumpAtoms[i].y; z1 = dumpAtoms[i].z;
-
-				// Going through all positions of the probe
-				probePosition.x = dumpfile.xlo;
-				for (int l = 0; l < freeVolumeVars.nBins_dist_x; ++l)
+				// If the atom type matches the atom type given in config file, then proceed with the calculation
+				if (dumpAtoms[k].atomType == freeVolumeconfig[j].atom1)
 				{
-					probePosition.y = dumpfile.ylo;
-					for (int m = 0; m < freeVolumeVars.nBins_dist_y; ++m)
+					x1 = dumpAtoms[k].x; y1 = dumpAtoms[k].y; z1 = dumpAtoms[k].z;
+
+					// Going through all positions of the probe
+					probePosition.x = dumpfile.xlo;
+					for (int l = 0; l < freeVolumeVars.nBins_dist_x; ++l)
 					{
-						probePosition.z = dumpfile.zlo;
-						for (int n = 0; n < freeVolumeVars.nBins_dist_z; ++n)
+						probePosition.y = dumpfile.ylo;
+						for (int m = 0; m < freeVolumeVars.nBins_dist_y; ++m)
 						{
-							// Storing the position of probe
-							// and checking the distance between the probe and the atoms
-							x2 = probePosition.x; y2 = probePosition.y; z2 = probePosition.z;
-							distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
+							probePosition.z = dumpfile.zlo;
+							for (int n = 0; n < freeVolumeVars.nBins_dist_z; ++n)
+							{
+								// Storing probe positions in x2, y2, z2 variables for easy calculations
+								// and checking the distance between the probe and the atoms
+								x2 = probePosition.x; y2 = probePosition.y; z2 = probePosition.z;
+								distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
+							}
+							probePosition.z += freeVolumeVars.delDistance;
 						}
-						probePosition.z += freeVolumeVars.delDistance;
+						probePosition.y += freeVolumeVars.delDistance;
 					}
-					probePosition.y += freeVolumeVars.delDistance;
+					probePosition.x += freeVolumeVars.delDistance;
 				}
-				probePosition.x += freeVolumeVars.delDistance;
+
 			}
+
+			free (freeVolumeLogfilename);
+			fclose (freeVolumeLogfile);
 		}
 
 
@@ -1146,6 +1171,8 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 
 		free (isOccupied);
 	}
+
+	free (freeVolumeDist);
 }
 
 void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, CONFIG *freeVolumeconfig, CONFIG *vwdSize, NLINES_CONFIG entries, int nThreads)
