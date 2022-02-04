@@ -1062,6 +1062,7 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 	// Probe size is set. It'll vary in a loop, from minimum to maximum size
 	for (int i = 0; i < freeVolumeVars.nBins_probeSweep; ++i)
 	{
+		printf("Current probe size: %f\n", freeVolumeVars.currentProbeSize);
 		freeVolumeVars.delDistance = 0.25 * freeVolumeVars.currentProbeSize;
 		freeVolumeVars.nBins_dist_x = (int) (freeVolumeVars.xLength / freeVolumeVars.delDistance);
 		freeVolumeVars.nBins_dist_y = (int) (freeVolumeVars.yLength / freeVolumeVars.delDistance);
@@ -1078,9 +1079,12 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 		int *isOccupied;
 		isOccupied = (int *) malloc (freeVolumeVars.nBins_dist_x * freeVolumeVars.nBins_dist_y * freeVolumeVars.nBins_dist_z * sizeof (int));
 
+		// Create new function to perform the following loop cluster
+		// Pass the following variables
+		// isOccupied = dumpfile, freeVolumeVars, nThreads
+
 		// With a particular probe size, check all three dimensions
 		probePosition.x = dumpfile.xlo;
-		loopCount = 0;
 
 		for (int j = 0; j < freeVolumeVars.nBins_dist_x; ++j)
 		{
@@ -1130,18 +1134,18 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 			freeVolumeLogfilename = (char *) malloc (50 * sizeof (char));
 			FILE *freeVolumeLogfile;
 
-			sprintf (freeVolumeLogfilename, "logs/freeVolume_%d.log", freeVolumeconfig[j].atom1);
+			sprintf (freeVolumeLogfilename, "logs/freeVolume_%d_%.5f.log", freeVolumeconfig[j].atom1, freeVolumeVars.currentProbeSize);
 			freeVolumeLogfile = fopen (freeVolumeLogfilename, "a");
 			// printf("%d\n", freeVolumeconfig[j].atom1);
 			// sleep (1);
+
+			// Function the following loop cluster
+			// freeVolumeDist = dumpfile, dumpAtoms, freeVolumeconfig, nThreads
 
 			// Checking all atoms in dumpfile
 			#pragma omp parallel for
 			for (int k = 0; k < dumpfile.nAtoms; ++k)
 			{
-				printf("Probe size: %.3f; Computing free volume distribution for atom: %d                  \r\r", freeVolumeVars.currentProbeSize, (k + 1));
-				fflush (stdout);
-
 				// If the atom type matches the atom type given in config file, then proceed with the calculation
 				if (dumpAtoms[k].atomType == freeVolumeconfig[j].atom1)
 				{
