@@ -701,9 +701,11 @@ int getIndex1d (int i, int j, int width)
 	return index1d;
 }
 
-int getIndex1d_from3d (int x, int xWidth, int y, int yWidth, int z, int zWidth)
+long long int getIndex1d_from3d (int x, int xWidth, int y, int yWidth, int z, int zWidth)
 {
-	return ((z * yWidth * xWidth) + (y * xWidth) + x);
+	long long int arrayIndex;
+	arrayIndex = (long long int) ((z * yWidth * xWidth) + (y * xWidth) + x);
+	return arrayIndex;
 }
 
 void computeDistribution_OOP (ORDERPARAMETER *allData_array, DIST_VAR plotVars, DISTRIBUTION **distribution_OOP, int nThreads)
@@ -1033,6 +1035,174 @@ typedef struct freeVolumeDistribution
 	int nUnoccupied, nOccupied, atomType;
 } FREEVOLUME_DISTRIBUTION;
 
+int *computeFreeVolume_checkOccupation (int i, DUMPFILE_INFO dumpfile, DATA_ATOMS *dumpAtoms, FREEVOLUME_VARS freeVolumeVars, CONFIG *vwdSize, int nThreads)
+{
+	DATA_ATOMS probePosition;
+	float distance, x1, y1, z1, x2, y2, z2;
+	int *isOccupied;
+	long long int arraySize = (long long int)freeVolumeVars.nBins_dist_x * (long long int)freeVolumeVars.nBins_dist_y * (long long int)freeVolumeVars.nBins_dist_z, index1d, progress = 0;
+	float progressPercent;
+	isOccupied = (int *) calloc (arraySize, sizeof (int));
+	// printf("arraySize: %lld\n", arraySize);
+	// printf("nBins_dist_x: %d; nBins_dist_y: %d; nBins_dist_z: %d\n", freeVolumeVars.nBins_dist_x, freeVolumeVars.nBins_dist_y, freeVolumeVars.nBins_dist_z);
+
+	omp_set_num_threads (nThreads);
+
+	probePosition.x = dumpfile.xlo;
+
+	#pragma omp parallel for
+	for (int j = 0; j < freeVolumeVars.nBins_dist_x; ++j)
+	{
+		probePosition.y = dumpfile.ylo;
+		for (int k = 0; k < freeVolumeVars.nBins_dist_y; ++k)
+		{
+			probePosition.z = dumpfile.zlo;
+			for (int l = 0; l < freeVolumeVars.nBins_dist_z; ++l)
+			{
+				progress++;
+				progressPercent = (float)progress / (float)arraySize;
+				printf("Progress: %f%%             \r", progressPercent * 100.0);
+				fflush (stdout);
+
+				for (int m = 0; m < dumpfile.nAtoms; ++m)
+				{		
+					x1 = dumpAtoms[i].x; y1 = dumpAtoms[i].y; z1 = dumpAtoms[i].z;
+					x2 = probePosition.x; y2 = probePosition.y; z2 = probePosition.z;
+					distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
+
+					index1d = getIndex1d_from3d (j, freeVolumeVars.nBins_dist_x, k, freeVolumeVars.nBins_dist_y, l, freeVolumeVars.nBins_dist_z);
+
+					if (distance < (freeVolumeVars.currentProbeSize + vwdSize[dumpAtoms[i].atomType - 1].radius))
+						isOccupied[index1d] = 1;
+				}
+				probePosition.z += freeVolumeVars.delDistance;
+			}
+			probePosition.y += freeVolumeVars.delDistance;
+		}
+		probePosition.x += freeVolumeVars.delDistance;
+	}
+
+	return isOccupied;
+}
+
+FREEVOLUME_DISTRIBUTION *computeFreeVolume_getDistribution (int i, int j, FREEVOLUME_VARS freeVolumeVars, DUMPFILE_INFO dumpfile, DATA_ATOMS *dumpAtoms, CONFIG *freeVolumeconfig, int nThreads)
+{
+	DATA_ATOMS probePosition;
+	FREEVOLUME_DISTRIBUTION *freeVolumeDist;
+	freeVolumeDist = (FREEVOLUME_DISTRIBUTION *) malloc (freeVolumeVars.nBins_dist * sizeof (FREEVOLUME_DISTRIBUTION));
+	float distance, x1, y1, z1, x2, y2, z2;
+	int *isOccupied;
+	long long int index1d, arraySize = (long long int)freeVolumeVars.nBins_dist_x * (long long int)freeVolumeVars.nBins_dist_y * (long long int)freeVolumeVars.nBins_dist_z, progress = 0;
+	float progressPercent;
+	isOccupied = (int *) malloc (arraySize * sizeof (int));
+
+	omp_set_num_threads (nThreads);
+
+	#pragma omp parallel for
+	for (int k = 0; k < dumpfile.nAtoms; ++k)
+	{
+		printf("Computing distribution: %d/%d atoms scanned           \r", k, dumpfile.nAtoms);
+		fflush (stdout);
+		// If the atom type matches the atom type given in config file, then proceed with the calculation
+		if (dumpAtoms[k].atomType == freeVolumeconfig[j].atom1)
+		{
+			x1 = dumpAtoms[k].x; y1 = dumpAtoms[k].y; z1 = dumpAtoms[k].z;
+
+			// Going through all positions of the probe
+			probePosition.x = dumpfile.xlo;
+			for (int l = 0; l < freeVolumeVars.nBins_dist_x; ++l)
+			{
+				probePosition.y = dumpfile.ylo;
+				for (int m = 0; m < freeVolumeVars.nBins_dist_y; ++m)
+				{
+					probePosition.z = dumpfile.zlo;
+					for (int n = 0; n < freeVolumeVars.nBins_dist_z; ++n)
+					{
+						// Check if the position is unoccupied. Proceed only if it is unoccupied
+						index1d = getIndex1d_from3d (l, freeVolumeVars.nBins_dist_x, m, freeVolumeVars.nBins_dist_y, n, freeVolumeVars.nBins_dist_z);
+
+						// Storing probe positions in x2, y2, z2 variables for easy calculations
+						// and checking the distance between the probe and the atoms
+						x2 = probePosition.x; y2 = probePosition.y; z2 = probePosition.z;
+						distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
+
+						// Loop through the distribution struct and check if the calculated distance falls within the range
+						for (int i = 0; i < freeVolumeVars.nBins_dist; ++i)
+						{
+							if (distance > freeVolumeDist[i].binStart_dist && distance <= freeVolumeDist[i].binEnd_dist)
+							{
+								if (isOccupied[index1d] == 0)
+								{
+									freeVolumeDist[i].nUnoccupied++;
+								}
+								else if (isOccupied[index1d] == 1)
+								{
+									freeVolumeDist[i].nOccupied++;
+								}
+								freeVolumeDist[i].nUnoccupied++;
+							}
+						}
+						probePosition.z += freeVolumeVars.delDistance;
+					}
+					probePosition.y += freeVolumeVars.delDistance;
+				}
+				probePosition.x += freeVolumeVars.delDistance;
+			}
+		}
+	}
+
+	return freeVolumeDist;
+}
+
+void initializeFreeVolumeDistribution (FREEVOLUME_DISTRIBUTION **freeVolumeDist, FREEVOLUME_VARS freeVolumeVars)
+{
+	(*freeVolumeDist)[0].binStart_dist = freeVolumeVars.binStart_dist;
+	(*freeVolumeDist)[0].binEnd_dist = (*freeVolumeDist)[0].binStart_dist + freeVolumeVars.binSize_dist;
+	(*freeVolumeDist)[0].nUnoccupied = 0;
+	(*freeVolumeDist)[0].nOccupied = 0;
+
+	// Setting bin values for free volume distribution
+	for (int i = 1; i < freeVolumeVars.nBins_dist; ++i)
+	{
+		(*freeVolumeDist)[i].binStart_dist = (*freeVolumeDist)[i - 1].binEnd_dist;
+		(*freeVolumeDist)[i].binEnd_dist = (*freeVolumeDist)[i].binStart_dist + freeVolumeVars.binSize_dist;
+		(*freeVolumeDist)[i].nUnoccupied = 0;
+		(*freeVolumeDist)[i].nOccupied = 0;
+	}
+}
+
+void initializeNBins (FREEVOLUME_VARS *freeVolumeVars)
+{
+	(*freeVolumeVars).delDistance = 0.25 * (*freeVolumeVars).currentProbeSize;
+	(*freeVolumeVars).nBins_dist_x = (int) ((*freeVolumeVars).xLength / (*freeVolumeVars).delDistance);
+	(*freeVolumeVars).nBins_dist_y = (int) ((*freeVolumeVars).yLength / (*freeVolumeVars).delDistance);
+	(*freeVolumeVars).nBins_dist_z = (int) ((*freeVolumeVars).zLength / (*freeVolumeVars).delDistance);
+}
+
+void resetFreeVolumeDistCounts (FREEVOLUME_DISTRIBUTION **freeVolumeDist, FREEVOLUME_VARS freeVolumeVars)
+{
+	for (int k = 0; k < freeVolumeVars.nBins_dist; ++k)
+	{
+		(*freeVolumeDist)[k].nUnoccupied = 0;
+		(*freeVolumeDist)[k].nOccupied = 0;
+	}	
+}
+
+void printFreeVolumeDistribution (FREEVOLUME_DISTRIBUTION *freeVolumeDist, int atomType, float probeSize, int nBins)
+{
+	char *freeVolumeLogfilename;
+	freeVolumeLogfilename = (char *) malloc (50 * sizeof (char));
+	FILE *freeVolumeLogfile;
+	sprintf (freeVolumeLogfilename, "logs/freeVolume_%d_%.5f.log", atomType, probeSize);
+	freeVolumeLogfile = fopen (freeVolumeLogfilename, "a");
+	for (int k = 0; k < nBins; ++k)
+	{
+		fprintf(freeVolumeLogfile, "%f %f %d %d\n", freeVolumeDist[k].binStart_dist, freeVolumeDist[k].binEnd_dist, freeVolumeDist[k].nOccupied, freeVolumeDist[k].nUnoccupied);
+	}
+	free (freeVolumeLogfilename);
+	fclose (freeVolumeLogfile);
+}
+
 void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dumpfile, CONFIG *freeVolumeconfig, CONFIG *vwdSize, NLINES_CONFIG entries, int nThreads)
 {
 	DATA_ATOMS probePosition;
@@ -1041,18 +1211,7 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 	FREEVOLUME_DISTRIBUTION *freeVolumeDist;
 	freeVolumeDist = (FREEVOLUME_DISTRIBUTION *) malloc (freeVolumeVars.nBins_dist * sizeof (FREEVOLUME_DISTRIBUTION));
 
-	freeVolumeDist[0].binStart_dist = freeVolumeVars.binStart_dist;
-	freeVolumeDist[0].binEnd_dist = freeVolumeDist[0].binStart_dist + freeVolumeVars.binSize_dist;
-	freeVolumeDist[0].nUnoccupied = 0;
-	freeVolumeDist[0].nOccupied = 0;
-	// Setting bin values for free volume distribution
-	for (int i = 1; i < freeVolumeVars.nBins_dist; ++i)
-	{
-		freeVolumeDist[i].binStart_dist = freeVolumeDist[i - 1].binEnd_dist;
-		freeVolumeDist[i].binEnd_dist = freeVolumeDist[i].binStart_dist + freeVolumeVars.binSize_dist;
-		freeVolumeDist[i].nUnoccupied = 0;
-		freeVolumeDist[i].nOccupied = 0;
-	}
+	initializeFreeVolumeDistribution (&freeVolumeDist, freeVolumeVars);
 
 	float distance, x1, y1, z1, x2, y2, z2;
 	int index1d;
@@ -1062,156 +1221,21 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 	// Probe size is set. It'll vary in a loop, from minimum to maximum size
 	for (int i = 0; i < freeVolumeVars.nBins_probeSweep; ++i)
 	{
-		printf("Current probe size: %f\n", freeVolumeVars.currentProbeSize);
-		freeVolumeVars.delDistance = 0.25 * freeVolumeVars.currentProbeSize;
-		freeVolumeVars.nBins_dist_x = (int) (freeVolumeVars.xLength / freeVolumeVars.delDistance);
-		freeVolumeVars.nBins_dist_y = (int) (freeVolumeVars.yLength / freeVolumeVars.delDistance);
-		freeVolumeVars.nBins_dist_z = (int) (freeVolumeVars.zLength / freeVolumeVars.delDistance);
+		initializeNBins (&freeVolumeVars);
 
-		// Reset the position at the start of every probe sweep
-		// Occurs whenever the probe size is changed
 		probePosition.x = dumpfile.xlo; probePosition.y = dumpfile.ylo; probePosition.z = dumpfile.zlo;
-
-		// Initialize a 3D array
-		// If the array is 1, then the space is occupied.
-		// Else, if the array is 0, the space is not occupied
 
 		int *isOccupied;
 		isOccupied = (int *) malloc (freeVolumeVars.nBins_dist_x * freeVolumeVars.nBins_dist_y * freeVolumeVars.nBins_dist_z * sizeof (int));
+		isOccupied = computeFreeVolume_checkOccupation (i, dumpfile, dumpAtoms, freeVolumeVars, vwdSize, nThreads);
 
-		// Create new function to perform the following loop cluster
-		// Pass the following variables
-		// isOccupied = dumpfile, freeVolumeVars, nThreads
-
-		// With a particular probe size, check all three dimensions
-		probePosition.x = dumpfile.xlo;
-
-		for (int j = 0; j < freeVolumeVars.nBins_dist_x; ++j)
-		{
-			probePosition.y = dumpfile.ylo;
-			for (int k = 0; k < freeVolumeVars.nBins_dist_y; ++k)
-			{
-				probePosition.z = dumpfile.zlo;
-				for (int l = 0; l < freeVolumeVars.nBins_dist_z; ++l)
-				{
-					#pragma omp parallel for
-					for (int m = 0; m < dumpfile.nAtoms; ++m)
-					{		
-						x1 = dumpAtoms[i].x; y1 = dumpAtoms[i].y; z1 = dumpAtoms[i].z;
-						x2 = probePosition.x; y2 = probePosition.y; z2 = probePosition.z;
-						distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
-
-						index1d = getIndex1d_from3d (j, freeVolumeVars.nBins_dist_x, k, freeVolumeVars.nBins_dist_y, l, freeVolumeVars.nBins_dist_z);
-
-						if (distance < (freeVolumeVars.currentProbeSize + vwdSize[dumpAtoms[i].atomType - 1].radius))
-							isOccupied[index1d] = 1;
-						else
-							isOccupied[index1d] = 0;
-
-					}
-					probePosition.z += freeVolumeVars.delDistance;
-				}
-				probePosition.y += freeVolumeVars.delDistance;
-			}
-			probePosition.x += freeVolumeVars.delDistance;
-		}
-
-		// 
-		// Check free volume distribution
-		// Loop through all atoms, calculate the distance between the atoms and unoccupied sites (isOccuped variable corresponding to the value '0')
-		// Create a typedef struct containing binStart_dist, binEnd_dist, and number of unoccupied sites. (radial distribution of fee volume)
-		// This typedef struct is different for different atoms in NaPSS chains (mentioned in the corresponding config file)
-		// Loop through the above created typedef struct and check if the calculated distance falls within the range.
-		// If the calculated distances fall within the struct range, then increment the number of unoccupied sites
-		// Create a seperate file for each atom considered for free vlume volume radial distribution calculation. Output the values in dump format every timeframe
-		// At the end of processing the traj file, read the output file containing the free volume distribution, create time averaged value.
-		// 
-
-		// Creating an outer loop, for various atom types
+		// Looping through atom types
 		for (int j = 0; j < entries.nLines_freeVolumeconfig; ++j)
 		{
-			char *freeVolumeLogfilename;
-			freeVolumeLogfilename = (char *) malloc (50 * sizeof (char));
-			FILE *freeVolumeLogfile;
-
-			sprintf (freeVolumeLogfilename, "logs/freeVolume_%d_%.5f.log", freeVolumeconfig[j].atom1, freeVolumeVars.currentProbeSize);
-			freeVolumeLogfile = fopen (freeVolumeLogfilename, "a");
-			// printf("%d\n", freeVolumeconfig[j].atom1);
-			// sleep (1);
-
-			// Function the following loop cluster
-			// freeVolumeDist = dumpfile, dumpAtoms, freeVolumeconfig, nThreads
-
-			// Checking all atoms in dumpfile
-			#pragma omp parallel for
-			for (int k = 0; k < dumpfile.nAtoms; ++k)
-			{
-				// If the atom type matches the atom type given in config file, then proceed with the calculation
-				if (dumpAtoms[k].atomType == freeVolumeconfig[j].atom1)
-				{
-					x1 = dumpAtoms[k].x; y1 = dumpAtoms[k].y; z1 = dumpAtoms[k].z;
-
-					// Going through all positions of the probe
-					probePosition.x = dumpfile.xlo;
-					for (int l = 0; l < freeVolumeVars.nBins_dist_x; ++l)
-					{
-						probePosition.y = dumpfile.ylo;
-						for (int m = 0; m < freeVolumeVars.nBins_dist_y; ++m)
-						{
-							probePosition.z = dumpfile.zlo;
-							for (int n = 0; n < freeVolumeVars.nBins_dist_z; ++n)
-							{
-								// Check if the position is unoccupied. Proceed only if it is unoccupied
-								index1d = getIndex1d_from3d (l, freeVolumeVars.nBins_dist_x, m, freeVolumeVars.nBins_dist_y, n, freeVolumeVars.nBins_dist_z);
-
-								// Storing probe positions in x2, y2, z2 variables for easy calculations
-								// and checking the distance between the probe and the atoms
-								x2 = probePosition.x; y2 = probePosition.y; z2 = probePosition.z;
-								distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
-
-								// Loop through the distribution struct and check if the calculated distance falls within the range
-								for (int i = 0; i < freeVolumeVars.nBins_dist; ++i)
-								{
-									if (distance > freeVolumeDist[i].binStart_dist && distance <= freeVolumeDist[i].binEnd_dist)
-									{
-										if (isOccupied[index1d] == 0)
-										{
-											freeVolumeDist[i].nUnoccupied++;
-										}
-										else if (isOccupied[index1d] == 1)
-										{
-											freeVolumeDist[i].nOccupied++;
-										}
-										freeVolumeDist[i].nUnoccupied++;
-									}
-								}
-								probePosition.z += freeVolumeVars.delDistance;
-							}
-							probePosition.y += freeVolumeVars.delDistance;
-						}
-						probePosition.x += freeVolumeVars.delDistance;
-					}
-				}
-			}
-
-			// The free volume distribution from all the atoms (of the specified atomType) can be accessed from this loop
-			for (int k = 0; k < freeVolumeVars.nBins_dist; ++k)
-			{
-				fprintf(freeVolumeLogfile, "%f %f %d %d\n", freeVolumeDist[k].binStart_dist, freeVolumeDist[k].binEnd_dist, freeVolumeDist[k].nOccupied, freeVolumeDist[k].nUnoccupied);
-			}
-
-			// Zeroing the nUnoccupied count for next atomType usage
-			// Implement a function for the following loop in future
-			for (int k = 0; k < freeVolumeVars.nBins_dist; ++k)
-			{
-				freeVolumeDist[k].nUnoccupied = 0;
-				freeVolumeDist[k].nOccupied = 0;
-			}
-
-			free (freeVolumeLogfilename);
-			fclose (freeVolumeLogfile);
+			freeVolumeDist = computeFreeVolume_getDistribution (i, j, freeVolumeVars, dumpfile, dumpAtoms, freeVolumeconfig, nThreads);
+			printFreeVolumeDistribution (freeVolumeDist, freeVolumeconfig[j].atom1, freeVolumeVars.currentProbeSize, freeVolumeVars.nBins_dist);
+			resetFreeVolumeDistCounts (&freeVolumeDist, freeVolumeVars);
 		}
-
 
 		freeVolumeVars.currentProbeSize += freeVolumeVars.delProbeSize;
 		if (freeVolumeVars.currentProbeSize > freeVolumeVars.maxProbeSize)
