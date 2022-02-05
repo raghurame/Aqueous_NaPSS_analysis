@@ -1061,7 +1061,7 @@ int *computeFreeVolume_checkOccupation (int i, DUMPFILE_INFO dumpfile, DATA_ATOM
 			{
 				progress++;
 				progressPercent = (float)progress / (float)arraySize;
-				printf("Progress: %f%%             \r", progressPercent * 100.0);
+				printf("Checking site occupation for probeSize: %.2f... %f %% completed            \r", freeVolumeVars.currentProbeSize, progressPercent * 100.0);
 				fflush (stdout);
 
 				for (int m = 0; m < dumpfile.nAtoms; ++m)
@@ -1101,7 +1101,8 @@ FREEVOLUME_DISTRIBUTION *computeFreeVolume_getDistribution (int i, int j, FREEVO
 	#pragma omp parallel for
 	for (int k = 0; k < dumpfile.nAtoms; ++k)
 	{
-		printf("Computing distribution: %d/%d atoms scanned           \r", k, dumpfile.nAtoms);
+		progress++;
+		printf("Computing distribution (probeSize: %.2f): %.2f %% completed...           \r", freeVolumeVars.currentProbeSize, ((float) progress / (float) dumpfile.nAtoms) * 100.0);
 		fflush (stdout);
 		// If the atom type matches the atom type given in config file, then proceed with the calculation
 		if (dumpAtoms[k].atomType == freeVolumeconfig[j].atom1)
