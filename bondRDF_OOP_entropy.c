@@ -1128,19 +1128,18 @@ FREEVOLUME_DISTRIBUTION *computeFreeVolume_getDistribution (int i, int j, FREEVO
 						distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
 
 						// Loop through the distribution struct and check if the calculated distance falls within the range
-						for (int i = 0; i < freeVolumeVars.nBins_dist; ++i)
+						for (int o = 0; o < freeVolumeVars.nBins_dist; ++o)
 						{
-							if (distance > freeVolumeDist[i].binStart_dist && distance <= freeVolumeDist[i].binEnd_dist)
+							if (distance > freeVolumeDist[o].binStart_dist && distance <= freeVolumeDist[o].binEnd_dist)
 							{
 								if (isOccupied[index1d] == 0)
 								{
-									freeVolumeDist[i].nUnoccupied++;
+									freeVolumeDist[o].nUnoccupied++;
 								}
 								else if (isOccupied[index1d] == 1)
 								{
-									freeVolumeDist[i].nOccupied++;
+									freeVolumeDist[o].nOccupied++;
 								}
-								freeVolumeDist[i].nUnoccupied++;
 							}
 						}
 						probePosition.z += freeVolumeVars.delDistance;
