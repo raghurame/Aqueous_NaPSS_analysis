@@ -1060,7 +1060,7 @@ int *computeFreeVolume_checkOccupation (int i, DUMPFILE_INFO dumpfile, DATA_ATOM
 			{
 				progress++;
 				progressPercent = (float)progress / (float)arraySize;
-				printf("Checking site occupation for probeSize: %.2f... %3.2f %% completed            \r\r", freeVolumeVars.currentProbeSize, progressPercent * 100.0);
+				printf("Checking site occupation for probeSize: %.2f... %3.4f %% completed            \r\r", freeVolumeVars.currentProbeSize, progressPercent * 100.0);
 				fflush (stdout);
 
 				for (int m = 0; m < dumpfile.nAtoms; ++m)
@@ -1102,7 +1102,7 @@ void computeFreeVolume_getDistribution (int i, int j, FREEVOLUME_DISTRIBUTION **
 	for (int k = 0; k < dumpfile.nAtoms; ++k)
 	{
 		progress++;
-		printf("Computing distribution (probeSize: %.2f): %.2f %% completed...           \r", freeVolumeVars.currentProbeSize, ((float) progress / (float) dumpfile.nAtoms) * 100.0);
+		printf("Computing distribution (probeSize: %.2f): %3.4f %% completed...           \r", freeVolumeVars.currentProbeSize, ((float) progress / (float) dumpfile.nAtoms) * 100.0);
 		fflush (stdout);
 		// If the atom type matches the atom type given in config file, then proceed with the calculation
 		if (dumpAtoms[k].atomType == freeVolumeconfig[j].atom1)
@@ -1152,8 +1152,6 @@ void computeFreeVolume_getDistribution (int i, int j, FREEVOLUME_DISTRIBUTION **
 	}
 
 	printf("\n");
-
-	return freeVolumeDist;
 }
 
 void initializeFreeVolumeDistribution (FREEVOLUME_DISTRIBUTION **freeVolumeDist, FREEVOLUME_VARS freeVolumeVars)
@@ -1175,7 +1173,7 @@ void initializeFreeVolumeDistribution (FREEVOLUME_DISTRIBUTION **freeVolumeDist,
 
 void initializeNBins (FREEVOLUME_VARS *freeVolumeVars)
 {
-	(*freeVolumeVars).delDistance = 0.25 * (*freeVolumeVars).currentProbeSize;
+	(*freeVolumeVars).delDistance = 0.5 * (*freeVolumeVars).currentProbeSize;
 	(*freeVolumeVars).nBins_dist_x = (int) ((*freeVolumeVars).xLength / (*freeVolumeVars).delDistance);
 	(*freeVolumeVars).nBins_dist_y = (int) ((*freeVolumeVars).yLength / (*freeVolumeVars).delDistance);
 	(*freeVolumeVars).nBins_dist_z = (int) ((*freeVolumeVars).zLength / (*freeVolumeVars).delDistance);
