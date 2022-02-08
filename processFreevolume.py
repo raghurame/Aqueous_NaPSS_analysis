@@ -35,10 +35,6 @@ def processFiles (fileName):
 				nUnoccupied[float (logData[0])] = int (logData[3])
 				nTimeframes += 1
 
-	# Fractional free volume = free volume (cc/g) * density (g/cc)
-	# Fractional free volume = free volume per gram of material * mass per volume of the material
-	# Free volume per gram of the material = free volume * (bin volume (cc) / density (g/cc))
-
 	outputFilename = fileName.replace (".log", ".processed")
 
 	with open (outputFilename, "w") as outputFile:
@@ -54,7 +50,6 @@ def checkAllFiles ():
 		for file in files:
 			if ((fileContains in file) and ('logs' in dirs)):
 				filePath = dirs + "/" + file
-				# print (filePath)
 				processFiles (filePath)
 
 def main ():
