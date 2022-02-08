@@ -1070,8 +1070,18 @@ int *computeFreeVolume_checkOccupation (int i, DUMPFILE_INFO dumpfile, DATA_ATOM
 					distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
 
 					index1d = getIndex1d_from3d (j, freeVolumeVars.nBins_dist_x, k, freeVolumeVars.nBins_dist_y, l, freeVolumeVars.nBins_dist_z);
-					// printf("Checking occupation => index1d: %lld/%lld; r: %.2f  \r\r", index1d, arraySize, vwdSize[dumpAtoms[m].atomType - 1].radius);
+					// printf("Checking occupation => index1d: %lld/%lld;", index1d, arraySize);
 					// fflush (stdout);
+					// printf(" r: %.2f\n", vwdSize[dumpAtoms[m].atomType - 1].radius);
+					// fflush (stdout);
+
+					if (index1d >= arraySize)
+					{
+						printf("Checking occupation => index1d: %lld/%lld;", index1d, arraySize);
+						printf(" r: %.2f\n", vwdSize[dumpAtoms[m].atomType - 1].radius);
+						arraySize += 100;
+						isOccupied = (int *) realloc (isOccupied, sizeof (int) * arraySize);
+					}
 
 					if (distance < (freeVolumeVars.currentProbeSize + vwdSize[dumpAtoms[m].atomType - 1].radius))
 						isOccupied[index1d] = 1;
@@ -1089,7 +1099,7 @@ int *computeFreeVolume_checkOccupation (int i, DUMPFILE_INFO dumpfile, DATA_ATOM
 }
 
 // i corresponds to probeSize and j corresponds to atom type provided in the input config file
-void computeFreeVolume_getDistribution (int i, int j, FREEVOLUME_DISTRIBUTION **freeVolumeDist, FREEVOLUME_VARS freeVolumeVars, int **isOccupied, DUMPFILE_INFO dumpfile, DATA_ATOMS *dumpAtoms, CONFIG *freeVolumeconfig, int nThreads)
+void computeFreeVolume_getDistribution (int i, int j, FREEVOLUME_DISTRIBUTION **freeVolumeDist, FREEVOLUME_VARS freeVolumeVars, int *isOccupied, DUMPFILE_INFO dumpfile, DATA_ATOMS *dumpAtoms, CONFIG *freeVolumeconfig, int nThreads)
 {
 	DATA_ATOMS probePosition;
 	float distance, x1, y1, z1, x2, y2, z2;
@@ -1134,11 +1144,11 @@ void computeFreeVolume_getDistribution (int i, int j, FREEVOLUME_DISTRIBUTION **
 						{
 							if (distance > (*freeVolumeDist)[o].binStart_dist && distance <= (*freeVolumeDist)[o].binEnd_dist)
 							{
-								if ((*isOccupied)[index1d] == 0)
+								if (isOccupied[index1d] == 0)
 								{
 									(*freeVolumeDist)[o].nUnoccupied++;
 								}
-								else if ((*isOccupied)[index1d] == 1)
+								else if (isOccupied[index1d] == 1)
 								{
 									(*freeVolumeDist)[o].nOccupied++;
 								}
@@ -1175,7 +1185,7 @@ void initializeFreeVolumeDistribution (FREEVOLUME_DISTRIBUTION **freeVolumeDist,
 
 void initializeNBins (FREEVOLUME_VARS *freeVolumeVars)
 {
-	(*freeVolumeVars).delDistance = 0.5 * (*freeVolumeVars).currentProbeSize;
+	(*freeVolumeVars).delDistance = 1.0 * (*freeVolumeVars).currentProbeSize;
 	(*freeVolumeVars).nBins_dist_x = (int) ((*freeVolumeVars).xLength / (*freeVolumeVars).delDistance);
 	(*freeVolumeVars).nBins_dist_y = (int) ((*freeVolumeVars).yLength / (*freeVolumeVars).delDistance);
 	(*freeVolumeVars).nBins_dist_z = (int) ((*freeVolumeVars).zLength / (*freeVolumeVars).delDistance);
@@ -1337,12 +1347,12 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			// Set the plotVars.binSize_dist based on bondRDF
 			// bondRDF must be computed before computing the order parameter
 			// In order to create bondRDF, coords information must be saved for all the bonds
-			// computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter);
+			computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter);
 
-			// allData_array = computeOrderParameter (dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
+			allData_array = computeOrderParameter (dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
 
-			// computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
-			// computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
+			computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
+			computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
 
 			// Calculate entropy here, based on RDF
 
