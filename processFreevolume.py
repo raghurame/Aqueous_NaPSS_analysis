@@ -17,6 +17,7 @@ def processFiles (fileName):
 	nOccupied = {}
 	nUnoccupied = {}
 	nTimeframes = 0
+	density = 0.93
 
 	with open (fileName, "r") as inputFile:
 		for line in inputFile:
@@ -34,8 +35,16 @@ def processFiles (fileName):
 				nUnoccupied[float (logData[0])] = int (logData[3])
 				nTimeframes += 1
 
-	for key in nOccupied:
-		print (float (key), (float (key) + float (delInterval)), nOccupied[key], nUnoccupied[key])
+	# Fractional free volume = free volume (cc/g) * density (g/cc)
+	# Fractional free volume = free volume per gram of material * mass per volume of the material
+	# Free volume per gram of the material = free volume * (bin volume (cc) / density (g/cc))
+
+	outputFilename = fileName.replace (".log", ".processed")
+
+	with open (outputFilename, "w") as outputFile:
+		for key in nOccupied:
+			outputString = ("{} {} {} {} {}\n".format (float (key), (float (key) + float (delInterval)), nOccupied[key], nUnoccupied[key], nUnoccupied[key] / (nUnoccupied[key] + nOccupied[key])))
+			outputFile.write (outputString)		
 
 def checkAllFiles ():
 	fileContains = str (sys.argv[1])
@@ -45,7 +54,7 @@ def checkAllFiles ():
 		for file in files:
 			if ((fileContains in file) and ('logs' in dirs)):
 				filePath = dirs + "/" + file
-				print (filePath)
+				# print (filePath)
 				processFiles (filePath)
 
 def main ():
