@@ -53,7 +53,7 @@ typedef struct config
 
 typedef struct datafile_atoms
 {
-	int resNumber;
+	int resNumber, ix, iy, iz;
 	char resName[6], atomName[6], atomType2[6], molName[6];
 
 	int id, molType, atomType;
@@ -1185,7 +1185,7 @@ void initializeFreeVolumeDistribution (FREEVOLUME_DISTRIBUTION **freeVolumeDist,
 
 void initializeNBins (FREEVOLUME_VARS *freeVolumeVars)
 {
-	(*freeVolumeVars).delDistance = 1.0 * (*freeVolumeVars).currentProbeSize;
+	(*freeVolumeVars).delDistance = 0.25 * (*freeVolumeVars).currentProbeSize;
 	(*freeVolumeVars).nBins_dist_x = (int) ((*freeVolumeVars).xLength / (*freeVolumeVars).delDistance);
 	(*freeVolumeVars).nBins_dist_y = (int) ((*freeVolumeVars).yLength / (*freeVolumeVars).delDistance);
 	(*freeVolumeVars).nBins_dist_z = (int) ((*freeVolumeVars).zLength / (*freeVolumeVars).delDistance);
@@ -1372,12 +1372,15 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 
 		if (currentLine > 9 && currentLine < (9 + dumpfile.nAtoms))
 		{	
-			sscanf (lineString, "%d %d %f %f %f\n",
+			sscanf (lineString, "%d %d %f %f %f %*f %*f %*f %d %d %d\n",
 				&dumpAtoms[currentLine - 10].id,
 				&dumpAtoms[currentLine - 10].atomType,
 				&dumpAtoms[currentLine - 10].x,
 				&dumpAtoms[currentLine - 10].y,
-				&dumpAtoms[currentLine - 10].z);
+				&dumpAtoms[currentLine - 10].z,
+				&dumpAtoms[currentLine - 10].ix,
+				&dumpAtoms[currentLine - 10].iy,
+				&dumpAtoms[currentLine - 10].iz);
 		}
 
 		currentLine++;
