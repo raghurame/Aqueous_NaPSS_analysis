@@ -1064,7 +1064,7 @@ int *computeFreeVolume_checkOccupation (int i, DUMPFILE_INFO dumpfile, DATA_ATOM
 				fflush (stdout);
 
 				for (int m = 0; m < dumpfile.nAtoms; ++m)
-				{		
+				{
 					x1 = dumpAtoms[m].x; y1 = dumpAtoms[m].y; z1 = dumpAtoms[m].z;
 					x2 = probePosition.x; y2 = probePosition.y; z2 = probePosition.z;
 					distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
@@ -1084,7 +1084,9 @@ int *computeFreeVolume_checkOccupation (int i, DUMPFILE_INFO dumpfile, DATA_ATOM
 					}
 
 					if (distance < (freeVolumeVars.currentProbeSize + vwdSize[dumpAtoms[m].atomType - 1].radius))
+					{
 						isOccupied[index1d] = 1;
+					}
 				}
 				probePosition.z += freeVolumeVars.delDistance;
 			}
