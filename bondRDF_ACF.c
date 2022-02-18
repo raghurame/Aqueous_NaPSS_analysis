@@ -54,7 +54,12 @@ long long int getIndex1d (int i, int j, int width_j)
 	return index1d;
 }
 
-void storeLogfileInfo (char *logFilename, float **mainData, int nLines, int currentTrajCount)
+typedef struct allData
+{
+	float x1, y1, z1, x2, y2, z2, x3, y3, z3, distance;
+} ALL_DATA;
+
+void storeLogfileInfo (char *logFilename, ALL_DATA **fullData, int nLines, int currentTrajCount)
 {
 	FILE *logFile;
 	logFile = fopen (logFilename, "r");
@@ -69,7 +74,7 @@ void storeLogfileInfo (char *logFilename, float **mainData, int nLines, int curr
 		// currentLine is the column
 		// The whole data from input traj is stored in a single row. 
 		index1d = getIndex1d (currentTrajCount, currentLine, nLines);
-		sscanf (lineString, "%*d %*d %*d %*d %f\n", &(*mainData)[index1d]);
+		sscanf (lineString, "%f %f %f %f %f %f %f %f %f %f\n", &(*fullData)[index1d].x1, &(*fullData)[index1d].y1, &(*fullData)[index1d].z1, &(*fullData)[index1d].x2, &(*fullData)[index1d].y2, &(*fullData)[index1d].z2, &(*fullData)[index1d].x3, &(*fullData)[index1d].y3, &(*fullData)[index1d].z3, &(*fullData)[index1d].distance);
 		currentLine++;
 	}
 }
@@ -80,7 +85,7 @@ typedef struct openLogFiles_struct
 	long long int nLinesTotal;
 } LOGFILES_VARIABLES;
 
-LOGFILES_VARIABLES openLogFiles (FILE *mainDumpfile, float thresholdDistance, float **mainData)
+LOGFILES_VARIABLES openLogFiles (FILE *mainDumpfile, float thresholdDistance, ALL_DATA **fullData)
 {
 	char lineString[1000], *logFilename;
 	int isTimeline = 0, currentTimeframe;
@@ -102,8 +107,8 @@ LOGFILES_VARIABLES openLogFiles (FILE *mainDumpfile, float thresholdDistance, fl
 			{
 				fileVars.nLines = findNlines (logFilename);
 				fileVars.nLinesTotal += fileVars.nLines;
-				(*mainData) = (float *) realloc ((*mainData), fileVars.nLinesTotal * sizeof (float));
-				storeLogfileInfo (logFilename, &(*mainData), fileVars.nLines, fileVars.currentTrajCount);
+				(*fullData) = (ALL_DATA *) realloc ((*fullData), fileVars.nLinesTotal * sizeof (ALL_DATA));
+				storeLogfileInfo (logFilename, &(*fullData), fileVars.nLines, fileVars.currentTrajCount);
 				printf("reading file: %s     \r", logFilename);
 				fflush (stdout);
 				fileVars.currentTrajCount++;
@@ -119,12 +124,14 @@ LOGFILES_VARIABLES openLogFiles (FILE *mainDumpfile, float thresholdDistance, fl
 	return fileVars;
 }
 
-void computeACF (LOGFILES_VARIABLES fileVars, float *mainData)
+void computeACF (LOGFILES_VARIABLES fileVars, ALL_DATA *fullData)
 {
+	FILE *sampleOutput;
+	sampleOutput = fopen ("acf_sample", "w");
+
 	long long int index1d, index1d_2;
 	float mean, covariance, covariance_var, *acf;
 	acf = (float *) malloc (fileVars.currentTrajCount * sizeof (float));
-	int 
 
 	// 'i' denotes the bond pairs
 	for (int i = 0; i < fileVars.nLines; ++i)
@@ -136,7 +143,8 @@ void computeACF (LOGFILES_VARIABLES fileVars, float *mainData)
 		for (int j = 0; j < fileVars.currentTrajCount; ++j)
 		{
 			index1d = getIndex1d (j, i, fileVars.nLines);
-			mean += mainData[index1d];
+			printf("%f\n", fullData[index1d].distance);
+			mean += fullData[index1d].distance;
 		}
 		mean /= fileVars.currentTrajCount;
 
@@ -144,8 +152,8 @@ void computeACF (LOGFILES_VARIABLES fileVars, float *mainData)
 		for (int j = 0; j < fileVars.currentTrajCount; ++j)
 		{
 			index1d = getIndex1d (j, i, fileVars.nLines);
-			covariance_var = mainData[index1d] - mean;
-			covariance += pow ((mainData[index1d] - mean), 2);
+			covariance_var = fullData[index1d].distance - mean;
+			covariance += pow ((fullData[index1d].distance - mean), 2);
 		}
 		covariance /= fileVars.currentTrajCount;
 
@@ -154,39 +162,52 @@ void computeACF (LOGFILES_VARIABLES fileVars, float *mainData)
 		for (int j = 0; j < fileVars.currentTrajCount; ++j)
 		{
 			index1d = getIndex1d (j, i, fileVars.nLines);
-			mainData[index1d] -= mean;
+			fullData[index1d].distance -= mean;
 		}
 
 		// in this loop, 'j' is the timelag
 		for (int j = 0; j < fileVars.currentTrajCount; ++j)
 		{
 			acf[j] = 0;
+
 			// iterating through all the elements
 			for (int k = 0; k < (fileVars.currentTrajCount - j); ++k)
 			{
 				index1d = getIndex1d (k, i, fileVars.nLines);
 				index1d_2 = getIndex1d (k + j, i, fileVars.nLines);
-				acf[j] += mainData[index1d] * mainData[index1d_2];
+				acf[j] += (fullData[index1d].distance * fullData[index1d_2].distance);
 			}
+
 			acf[j] /= fileVars.currentTrajCount;
 			acf[j] /= covariance;
+			index1d = getIndex1d (j, i, fileVars.nLines);
+			fprintf(sampleOutput, "[%.3f, %.3f, %.3f], [%.3f, %.3f, %.3f], [%.3f, %.3f, %.3f], %.3f, %.3f\n", fullData[index1d].x1, fullData[index1d].y1, fullData[index1d].z1, fullData[index1d].x2, fullData[index1d].y2, fullData[index1d].z2, fullData[index1d].x3, fullData[index1d].y3, fullData[index1d].z3, fullData[index1d].distance, acf[j]);
 		}
+		printf("\n");
+		exit (1);
 	}
+
+	fclose (sampleOutput);
 }
 
 int main(int argc, char const *argv[])
 {
+	if (argc < 3)
+	{
+		printf("Required args:\n~~~~~~~~~~~~~~~\n\nargv[0] = ./program\nargv[1] = main dump file\nargv[2] = threshold distance to consider\n\n");
+		exit (1);
+	}
 	FILE *mainDumpfile;
 	mainDumpfile = fopen (argv[1], "r");
 
 	float thresholdDistance = atof (argv[2]);
-	float *mainData;
-	mainData = (float *) malloc (10 * sizeof (float));
+	ALL_DATA *fullData;
+	fullData = (ALL_DATA *) malloc (10 * sizeof (ALL_DATA));
 
 	LOGFILES_VARIABLES fileVars;
 
-	fileVars = openLogFiles (mainDumpfile, thresholdDistance, &mainData);
-	computeACF (fileVars, mainData);
+	fileVars = openLogFiles (mainDumpfile, thresholdDistance, &fullData);
+	computeACF (fileVars, fullData);
 
 	return 0;
 }

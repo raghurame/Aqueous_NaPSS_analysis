@@ -453,6 +453,11 @@ CONFIG *readVWDRadius (FILE *inputVDWConfigFile, int *nLines_return)
 		}
 	}
 
+	for (int i = 0; i < nLines; ++i)
+	{
+		inputVectors[i].radius /= 2;
+	}
+
 	(*nLines_return) = nLines;
 
 	rewind (inputVDWConfigFile);
@@ -494,13 +499,27 @@ DUMPFILE_INFO getDumpFileInfo (FILE *inputDumpFile)
 	return dumpfile;
 }
 
+float translatePeriodicDistance (float coord1, float coord2, float halfBoxDistance)
+{
+	if (abs (coord1 - coord2) > halfBoxDistance)
+	{
+		if (coord2 > coord1)
+			coord2 -= (halfBoxDistance * 2);
+		else if (coord1 > coord2)
+			coord2 += (halfBoxDistance * 2);
+	}
+	return coord2;
+}
+
 ORDERPARAMETER *computeOrderParameter (DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dumpfile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, int currentTimestep, unsigned int nElements)
 {
-	// FILE *allData;
-	// char *allData_string;
-	// allData_string = (char *) malloc (50 * sizeof (char));
-	// sprintf (allData_string, "logs/allData_%d.oop", currentTimestep);
-	// allData = fopen (allData_string, "w");
+	FILE *allData;
+	char *allData_string;
+	allData_string = (char *) malloc (50 * sizeof (char));
+	sprintf (allData_string, "logs/allData_%d.oop", currentTimestep);
+	allData = fopen (allData_string, "w");
+
+	fprintf(allData, "atom1, atom2, atom3, atom4, distance, angle (rad), angle (deg), OOP\n");
 
 	ORDERPARAMETER *allData_array;
 	allData_array = (ORDERPARAMETER *) malloc (nElements * sizeof (ORDERPARAMETER));
@@ -508,6 +527,7 @@ ORDERPARAMETER *computeOrderParameter (DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dump
 	unsigned int currentElement = 0;
 
 	float x1, x2, x3, x4, y1, y2, y3, y4, z1, z2, z3, z4, distance, dotProduct, magnitude1, magnitude2, cosTheta, theta, orderParameter;
+	float xDistHalf = ((dumpfile.xhi - dumpfile.xlo) / 2), yDistHalf = ((dumpfile.yhi - dumpfile.ylo) / 2), zDistHalf = ((dumpfile.zhi - dumpfile.zlo) / 2);
 
 	for (int i = 0; i < datafile.nBonds; ++i)
 	{
@@ -525,13 +545,11 @@ ORDERPARAMETER *computeOrderParameter (DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dump
 				if ((bonds[j].atom1Type == inputVectors[1].atom1 && bonds[j].atom2Type == inputVectors[1].atom2) || (bonds[j].atom1Type == inputVectors[1].atom2 && bonds[j].atom2Type == inputVectors[1].atom1))
 				{
 					// Finding the center of two bonds (x1, y1, z1) and (x2, y2, z2)
-					x1 = (dumpAtoms[bonds[i].atom1 - 1].x + dumpAtoms[bonds[i].atom2 - 1].x) / 2; 
-					y1 = (dumpAtoms[bonds[i].atom1 - 1].y + dumpAtoms[bonds[i].atom2 - 1].y) / 2; 
-					z1 = (dumpAtoms[bonds[i].atom1 - 1].z + dumpAtoms[bonds[i].atom2 - 1].z) / 2; 
-					x2 = (dumpAtoms[bonds[j].atom1 - 1].x + dumpAtoms[bonds[j].atom2 - 1].x) / 2; 
-					y2 = (dumpAtoms[bonds[j].atom1 - 1].y + dumpAtoms[bonds[j].atom2 - 1].y) / 2; 
-					z2 = (dumpAtoms[bonds[j].atom1 - 1].z + dumpAtoms[bonds[j].atom2 - 1].z) / 2;
+					x1 = (dumpAtoms[bonds[i].atom1 - 1].x + dumpAtoms[bonds[i].atom2 - 1].x) / 2; y1 = (dumpAtoms[bonds[i].atom1 - 1].y + dumpAtoms[bonds[i].atom2 - 1].y) / 2; z1 = (dumpAtoms[bonds[i].atom1 - 1].z + dumpAtoms[bonds[i].atom2 - 1].z) / 2; 
 
+					x2 = (dumpAtoms[bonds[j].atom1 - 1].x + dumpAtoms[bonds[j].atom2 - 1].x) / 2; y2 = (dumpAtoms[bonds[j].atom1 - 1].y + dumpAtoms[bonds[j].atom2 - 1].y) / 2; z2 = (dumpAtoms[bonds[j].atom1 - 1].z + dumpAtoms[bonds[j].atom2 - 1].z) / 2;
+
+					x2 = translatePeriodicDistance (x1, x2, xDistHalf); y2 = translatePeriodicDistance (y1, y2, yDistHalf); z2 = translatePeriodicDistance (z1, z2, zDistHalf);
 
 					// Distance between the centers of two bonds
 					distance = sqrt (((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1)) + ((z2 - z1) * (z2  - z1)));
@@ -561,7 +579,7 @@ ORDERPARAMETER *computeOrderParameter (DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dump
 					theta = acosf (cosTheta); 
 					orderParameter = ((3.0 * cosTheta * cosTheta) - 1.0) / 2.0;
 
-					// fprintf(allData, "%d %d %d %d %f %f %f %f\n", bonds[i].atom1, bonds[i].atom2, bonds[j].atom1, bonds[j].atom2, distance, theta, theta * 57.2958, orderParameter);
+					fprintf(allData, "%d %d %d %d %f %f %f %f\n", bonds[i].atom1, bonds[i].atom2, bonds[j].atom1, bonds[j].atom2, distance, theta, theta * 57.2958, orderParameter);
 
 					allData_array[currentElement].atom1 = bonds[i].atom1; 
 					allData_array[currentElement].atom2 = bonds[i].atom2; 
@@ -588,12 +606,11 @@ ORDERPARAMETER *computeOrderParameter (DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dump
 				if ((bonds[j].atom1Type == inputVectors[0].atom1 && bonds[j].atom2Type == inputVectors[0].atom2) || (bonds[j].atom1Type == inputVectors[0].atom2 && bonds[j].atom2Type == inputVectors[0].atom1))
 				{
 					// Finding the center of two bonds (x1, y1, z1) and (x2, y2, z2)
-					x1 = (dumpAtoms[bonds[i].atom1 - 1].x + dumpAtoms[bonds[i].atom2 - 1].x) / 2; 
-					x2 = (dumpAtoms[bonds[j].atom1 - 1].x + dumpAtoms[bonds[j].atom2 - 1].x) / 2; 
-					y1 = (dumpAtoms[bonds[i].atom1 - 1].y + dumpAtoms[bonds[i].atom2 - 1].y) / 2; 
-					y2 = (dumpAtoms[bonds[j].atom1 - 1].y + dumpAtoms[bonds[j].atom2 - 1].y) / 2; 
-					z1 = (dumpAtoms[bonds[i].atom1 - 1].z + dumpAtoms[bonds[i].atom2 - 1].z) / 2; 
-					z2 = (dumpAtoms[bonds[j].atom1 - 1].z + dumpAtoms[bonds[j].atom2 - 1].z) / 2;
+					x1 = (dumpAtoms[bonds[i].atom1 - 1].x + dumpAtoms[bonds[i].atom2 - 1].x) / 2; y1 = (dumpAtoms[bonds[i].atom1 - 1].y + dumpAtoms[bonds[i].atom2 - 1].y) / 2; z1 = (dumpAtoms[bonds[i].atom1 - 1].z + dumpAtoms[bonds[i].atom2 - 1].z) / 2; 
+
+					x2 = (dumpAtoms[bonds[j].atom1 - 1].x + dumpAtoms[bonds[j].atom2 - 1].x) / 2; y2 = (dumpAtoms[bonds[j].atom1 - 1].y + dumpAtoms[bonds[j].atom2 - 1].y) / 2; z2 = (dumpAtoms[bonds[j].atom1 - 1].z + dumpAtoms[bonds[j].atom2 - 1].z) / 2;
+
+					x2 = translatePeriodicDistance (x1, x2, xDistHalf); y2 = translatePeriodicDistance (y1, y2, yDistHalf); z2 = translatePeriodicDistance (z1, z2, zDistHalf);
 
 					// Distance between the centers of two bonds
 					distance = sqrt (((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1)) + ((z2 - z1) * (z2  - z1)));
@@ -900,11 +917,18 @@ void printDistribution_degrees (DISTRIBUTION *distribution_degrees, DIST_VAR plo
 	fclose (file_distribution_degrees_normalized);
 }
 
-void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, DATA_BONDS *bonds, CONFIG *inputVectors, DIST_VAR plotVars, int nThreads, float binSize_dist_RDF, float **bondRDF, int *RDFcounter)
+void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, DATA_BONDS *bonds, CONFIG *inputVectors, DIST_VAR plotVars, int nThreads, float binSize_dist_RDF, float **bondRDF, int *RDFcounter, int currentTimestep)
 {
+	FILE *bondRDF_logfile;
+	char *bondRDF_logfilename;
+	bondRDF_logfilename = (char *) malloc (50 * sizeof (char));
+	snprintf (bondRDF_logfilename, 50, "bondRDF_logs/%d.rdf", currentTimestep);
+	bondRDF_logfile = fopen (bondRDF_logfilename, "w");
+
 	(*RDFcounter)++;
 
 	float xDist = (dumpfile.xhi - dumpfile.xlo), yDist = (dumpfile.yhi - dumpfile.ylo), zDist = (dumpfile.zhi - dumpfile.zlo), simVolume = (xDist * yDist * zDist), bondDensity;
+	float xDistHalf = (xDist / 2), yDistHalf = (yDist / 2), zDistHalf = (zDist / 2);
 	int nBonds_RDF = 0;
 
 	// Computing bondRDF
@@ -915,6 +939,8 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 	float *nBonds_inBin_dist_RDF_float;
 	nBonds_inBin_dist_RDF_float = (float *) malloc (nBins_dist_RDF * sizeof (float));
 
+	float x_translated, y_translated, z_translated;
+
 	omp_set_num_threads (nThreads);
 	#pragma omp parallel for
 	for (int i = 0; i < datafile.nBonds; ++i)
@@ -924,6 +950,11 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 			bonds[i].atom1Type = (int) dumpAtoms[bonds[i].atom1 - 1].atomType; bonds[i].atom2Type = (int) dumpAtoms[bonds[i].atom2 - 1].atomType;
 			bonds[i].x1 = dumpAtoms[bonds[i].atom1 - 1].x; bonds[i].y1 = dumpAtoms[bonds[i].atom1 - 1].y; bonds[i].z1 = dumpAtoms[bonds[i].atom1 - 1].z;
 			bonds[i].x2 = dumpAtoms[bonds[i].atom2 - 1].x; bonds[i].y2 = dumpAtoms[bonds[i].atom2 - 1].y; bonds[i].z2 = dumpAtoms[bonds[i].atom2 - 1].z;
+
+			bonds[i].xc = findBondCenter (bonds[i].x1, dumpAtoms[bonds[i].atom1 - 1].ix, bonds[i].x2, dumpAtoms[bonds[i].atom2 - 1].ix);
+			bonds[i].yc = findBondCenter (bonds[i].y1, dumpAtoms[bonds[i].atom1 - 1].iy, bonds[i].y2, dumpAtoms[bonds[i].atom2 - 1].iy);
+			bonds[i].zc = findBondCenter (bonds[i].z1, dumpAtoms[bonds[i].atom1 - 1].iz, bonds[i].z2, dumpAtoms[bonds[i].atom2 - 1].iz);
+
 			bonds[i].xc = (bonds[i].x1 + bonds[i].x2) / 2; bonds[i].yc = (bonds[i].y1 + bonds[i].y2) / 2; bonds[i].zc = (bonds[i].z1 + bonds[i].z2) / 2;
 
 			for (int j = 0; j < datafile.nBonds; ++j)
@@ -935,8 +966,21 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 					bonds[j].x2 = dumpAtoms[bonds[j].atom2 - 1].x; bonds[j].y2 = dumpAtoms[bonds[j].atom2 - 1].y; bonds[j].z2 = dumpAtoms[bonds[j].atom2 - 1].z;
 					bonds[j].xc = (bonds[j].x1 + bonds[j].x2) / 2; bonds[j].yc = (bonds[j].y1 + bonds[j].y2) / 2; bonds[j].zc = (bonds[j].z1 + bonds[j].z2) / 2;
 
+					x_translated = translatePeriodicDistance (bonds[i].xc, bonds[j].xc, xDistHalf);
+					y_translated = translatePeriodicDistance (bonds[i].yc, bonds[j].yc, yDistHalf);
+					z_translated = translatePeriodicDistance (bonds[i].zc, bonds[j].zc, zDistHalf);
+
+					// if ((x_translated != bonds[j].xc) || (y_translated != bonds[j].yc) || (z_translated != bonds[j].zc))
+					// {
+					// 	printf("before translation => [%.3f, %.3f, %.3f] <=> ref: [%.3f, %.3f, %.3f]\nafter translation => [%.3f, %.3f, %.3f] <=> ref: [%.3f, %.3f, %.3f]\n\n", bonds[j].xc, bonds[j].yc, bonds[j].zc, bonds[i].xc, bonds[i].yc, bonds[i].zc, x_translated, y_translated, z_translated, bonds[i].xc, bonds[i].yc, bonds[i].zc);
+					// 	sleep (1);
+					// }
+
 					distance = sqrt (pow ((bonds[i].xc - bonds[j].xc), 2) + pow ((bonds[i].yc - bonds[j].yc), 2) + pow ((bonds[i].zc - bonds[j].zc), 2));
+					distance = sqrt (pow ((bonds[i].xc - x_translated), 2) + pow ((bonds[i].yc - y_translated), 2) + pow ((bonds[i].zc - z_translated), 2));
 					binStart_dist_RDF = 0.0;
+
+					fprintf(bondRDF_logfile, "%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n", bonds[i].xc, bonds[i].yc, bonds[i].zc, bonds[j].xc, bonds[j].yc, bonds[j].zc, x_translated, y_translated, z_translated, distance);
 
 					for (int k = 0; k < nBins_dist_RDF; ++k)
 					{
@@ -972,6 +1016,8 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 		(*bondRDF)[i] += (float) nBonds_inBin_dist_RDF_float[i] / bondDensity;
 		binStart_dist_RDF = binEnd_dist_RDF;
 	}
+
+	fclose (bondRDF_logfile);
 }
 
 void printBondRDF (float *bondRDF, int RDFcounter, int nBins_dist_RDF, float binSize_dist_RDF)
@@ -1212,7 +1258,7 @@ void printFreeVolumeDistribution (FREEVOLUME_DISTRIBUTION *freeVolumeDist, int a
 
 	for (int i = 0; i < nBins; ++i)
 	{
-		fprintf(freeVolumeLogfile, "%f %f %d %d %f\n", freeVolumeDist[i].binStart_dist, freeVolumeDist[i].binEnd_dist, freeVolumeDist[i].nOccupied, freeVolumeDist[i].nUnoccupied, (float)freeVolumeDist[i].nUnoccupied / (float)freeVolumeDist[i].nUnoccupied + (float)freeVolumeDist[i].nOccupied);
+		fprintf(freeVolumeLogfile, "%f %f %d %d %f\n", freeVolumeDist[i].binStart_dist, freeVolumeDist[i].binEnd_dist, freeVolumeDist[i].nOccupied, freeVolumeDist[i].nUnoccupied, ((float)freeVolumeDist[i].nUnoccupied / ((float)freeVolumeDist[i].nUnoccupied + (float)freeVolumeDist[i].nOccupied)));
 	}
 	free (freeVolumeLogfilename);
 	fclose (freeVolumeLogfile);
@@ -1307,8 +1353,9 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	int isNElementsSet = 0;
 
 	// Datafile struct is used to store dump atom information
-	DATA_ATOMS *dumpAtoms;
+	DATA_ATOMS *dumpAtoms, *dumpAtoms_translated;
 	dumpAtoms = (DATA_ATOMS *) malloc (dumpfile.nAtoms * sizeof (DATA_ATOMS));
+	dumpAtoms_translated = (DATA_ATOMS *) malloc (dumpfile.nAtoms * sizeof (DATA_ATOMS));
 
 	ORDERPARAMETER *allData_array;
 
@@ -1339,27 +1386,21 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 		}
 
 		// Main processing loop
-		if (currentDumpstep > 2 && nElements > 0 && currentLine == 2)
+		if ((currentDumpstep > 2) && (nElements > 0) && (currentLine == 2))
 		{
 			sscanf (lineString, "%d", &currentTimestep);
 			printf("Scanning timestep: %d...               \n", currentTimestep);
 			fflush (stdout); 
 
-			// Calculate RDF for the bonds in config file
-			// Set the plotVars.binSize_dist based on bondRDF
-			// bondRDF must be computed before computing the order parameter
-			// In order to create bondRDF, coords information must be saved for all the bonds
-			computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter);
+			computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter, currentTimestep);
 
-			allData_array = computeOrderParameter (dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
+			// Checking bond orientation
+			// allData_array = computeOrderParameter (dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
+			// computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
+			// computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
 
-			computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
-			computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
-
-			// Calculate entropy here, based on RDF
-
-			// Calculate free volume	
-			computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, nThreads);
+			// Calculating free volume distribution
+			// computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, nThreads);
 
 			isTimestep = 0;
 		}
@@ -1396,6 +1437,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 int main(int argc, char const *argv[])
 {
 	system ("mkdir logs");
+	system ("mkdir bondRDF_logs");
 
 	long number_of_processors = sysconf(_SC_NPROCESSORS_ONLN);
 	int nThreads = (int) number_of_processors - 1;
