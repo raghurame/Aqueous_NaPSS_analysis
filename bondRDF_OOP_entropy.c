@@ -511,6 +511,30 @@ float translatePeriodicDistance (float coord1, float coord2, float halfBoxDistan
 	return coord2;
 }
 
+float findBondCenter (float coord1, int image1, float coord2, int image2, float xlo, float xhi)
+{
+	float bondCenter;
+
+	if (image1 > image2)
+		coord1 = xhi + coord1 - xlo;
+	else if (image1 < image2)
+		coord1 = xlo - (xhi - coord1);
+
+	bondCenter = ((coord1 + coord2) / 2);
+
+	return bondCenter;
+}
+
+float findConnectedAtom_periodicTranslation (float coord1, int image1, float coord2, int image2, float xlo, float xhi)
+{
+	if (image1 > image2)
+		coord1 = xhi + coord1 - xlo;
+	else if (image1 < image2)
+		coord1 = xlo - (xhi - coord1);
+
+	return coord1;
+}
+
 ORDERPARAMETER *computeOrderParameter (DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dumpfile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, int currentTimestep, unsigned int nElements)
 {
 	FILE *allData;
@@ -545,11 +569,25 @@ ORDERPARAMETER *computeOrderParameter (DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dump
 				if ((bonds[j].atom1Type == inputVectors[1].atom1 && bonds[j].atom2Type == inputVectors[1].atom2) || (bonds[j].atom1Type == inputVectors[1].atom2 && bonds[j].atom2Type == inputVectors[1].atom1))
 				{
 					// Finding the center of two bonds (x1, y1, z1) and (x2, y2, z2)
-					x1 = (dumpAtoms[bonds[i].atom1 - 1].x + dumpAtoms[bonds[i].atom2 - 1].x) / 2; y1 = (dumpAtoms[bonds[i].atom1 - 1].y + dumpAtoms[bonds[i].atom2 - 1].y) / 2; z1 = (dumpAtoms[bonds[i].atom1 - 1].z + dumpAtoms[bonds[i].atom2 - 1].z) / 2; 
+					// x1 = (dumpAtoms[bonds[i].atom1 - 1].x + dumpAtoms[bonds[i].atom2 - 1].x) / 2; 
+					// y1 = (dumpAtoms[bonds[i].atom1 - 1].y + dumpAtoms[bonds[i].atom2 - 1].y) / 2; 
+					// z1 = (dumpAtoms[bonds[i].atom1 - 1].z + dumpAtoms[bonds[i].atom2 - 1].z) / 2; 
 
-					x2 = (dumpAtoms[bonds[j].atom1 - 1].x + dumpAtoms[bonds[j].atom2 - 1].x) / 2; y2 = (dumpAtoms[bonds[j].atom1 - 1].y + dumpAtoms[bonds[j].atom2 - 1].y) / 2; z2 = (dumpAtoms[bonds[j].atom1 - 1].z + dumpAtoms[bonds[j].atom2 - 1].z) / 2;
+					x1 = findBondCenter (dumpAtoms[bonds[i].atom1 - 1].x, dumpAtoms[bonds[i].atom1 - 1].ix, dumpAtoms[bonds[i].atom2 - 1].x, dumpAtoms[bonds[i].atom2 - 1].ix, dumpfile.xlo, dumpfile.xhi);
+					y1 = findBondCenter (dumpAtoms[bonds[i].atom1 - 1].y, dumpAtoms[bonds[i].atom1 - 1].iy, dumpAtoms[bonds[i].atom2 - 1].y, dumpAtoms[bonds[i].atom2 - 1].iy, dumpfile.ylo, dumpfile.yhi);
+					z1 = findBondCenter (dumpAtoms[bonds[i].atom1 - 1].z, dumpAtoms[bonds[i].atom1 - 1].iz, dumpAtoms[bonds[i].atom2 - 1].z, dumpAtoms[bonds[i].atom2 - 1].iz, dumpfile.zlo, dumpfile.zhi);
 
-					x2 = translatePeriodicDistance (x1, x2, xDistHalf); y2 = translatePeriodicDistance (y1, y2, yDistHalf); z2 = translatePeriodicDistance (z1, z2, zDistHalf);
+					// x2 = (dumpAtoms[bonds[j].atom1 - 1].x + dumpAtoms[bonds[j].atom2 - 1].x) / 2; 
+					// y2 = (dumpAtoms[bonds[j].atom1 - 1].y + dumpAtoms[bonds[j].atom2 - 1].y) / 2; 
+					// z2 = (dumpAtoms[bonds[j].atom1 - 1].z + dumpAtoms[bonds[j].atom2 - 1].z) / 2;
+
+					x2 = findBondCenter (dumpAtoms[bonds[j].atom1 - 1].x, dumpAtoms[bonds[j].atom1 - 1].ix, dumpAtoms[bonds[j].atom2 - 1].x, dumpAtoms[bonds[j].atom2 - 1].ix, dumpfile.xlo, dumpfile.xhi);
+					y2 = findBondCenter (dumpAtoms[bonds[j].atom1 - 1].y, dumpAtoms[bonds[j].atom1 - 1].iy, dumpAtoms[bonds[j].atom2 - 1].y, dumpAtoms[bonds[j].atom2 - 1].iy, dumpfile.ylo, dumpfile.yhi);
+					z2 = findBondCenter (dumpAtoms[bonds[j].atom1 - 1].z, dumpAtoms[bonds[j].atom1 - 1].iz, dumpAtoms[bonds[j].atom2 - 1].z, dumpAtoms[bonds[j].atom2 - 1].iz, dumpfile.zlo, dumpfile.zhi);
+
+					x2 = translatePeriodicDistance (x1, x2, xDistHalf); 
+					y2 = translatePeriodicDistance (y1, y2, yDistHalf); 
+					z2 = translatePeriodicDistance (z1, z2, zDistHalf);
 
 					// Distance between the centers of two bonds
 					distance = sqrt (((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1)) + ((z2 - z1) * (z2  - z1)));
@@ -917,20 +955,6 @@ void printDistribution_degrees (DISTRIBUTION *distribution_degrees, DIST_VAR plo
 	fclose (file_distribution_degrees_normalized);
 }
 
-float findBondCenter (float coord1, int image1, float coord2, int image2, float xlo, float xhi)
-{
-	float bondCenter;
-
-	if (image1 > image2)
-		coord1 = xhi + coord1 - xlo;
-	else if (image1 < image2)
-		coord1 = xlo - (xhi - coord1);
-
-	bondCenter = ((coord1 + coord2) / 2);
-
-	return bondCenter;
-}
-
 void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, DATA_BONDS *bonds, CONFIG *inputVectors, DIST_VAR plotVars, int nThreads, float binSize_dist_RDF, float **bondRDF, int *RDFcounter, int currentTimestep)
 {
 	FILE *bondRDF_logfile;
@@ -995,7 +1019,7 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 					// 	sleep (1);
 					// }
 
-					distance = sqrt (pow ((bonds[i].xc - bonds[j].xc), 2) + pow ((bonds[i].yc - bonds[j].yc), 2) + pow ((bonds[i].zc - bonds[j].zc), 2));
+					// distance = sqrt (pow ((bonds[i].xc - bonds[j].xc), 2) + pow ((bonds[i].yc - bonds[j].yc), 2) + pow ((bonds[i].zc - bonds[j].zc), 2));
 					distance = sqrt (pow ((bonds[i].xc - x_translated), 2) + pow ((bonds[i].yc - y_translated), 2) + pow ((bonds[i].zc - z_translated), 2));
 					binStart_dist_RDF = 0.0;
 
@@ -1344,7 +1368,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	plotVars.maxDist = sqrt ((hyp1 * hyp1) + (yDist * yDist));
 
 	// Setting the number of bins across distance, degree, and OOP; based on the set bin size. These bin sizes can be adjusted for a smoother distribution curve
-	plotVars.binSize_dist = 2; plotVars.binSize_OOP = 0.01; plotVars.binSize_deg = 3;
+	plotVars.binSize_dist = 1; plotVars.binSize_OOP = 0.01; plotVars.binSize_deg = 3;
 	plotVars.nBins_dist = (((int) plotVars.maxDist) / (int) plotVars.binSize_dist) + 1; plotVars.nBins_OOP = (int) ((1 + 0.5) / plotVars.binSize_OOP) + 1; plotVars.nBins_deg = (180 / (int) plotVars.binSize_deg) + 1;
 
 	// [degrees][distance] and [oop][distance]
@@ -1414,9 +1438,9 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter, currentTimestep);
 
 			// Checking bond orientation
-			// allData_array = computeOrderParameter (dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
-			// computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
-			// computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
+			allData_array = computeOrderParameter (dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
+			computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
+			computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
 
 			// Calculating free volume distribution
 			// computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, nThreads);

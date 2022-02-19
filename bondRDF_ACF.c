@@ -126,9 +126,13 @@ LOGFILES_VARIABLES openLogFiles (FILE *mainDumpfile, float thresholdDistance, AL
 
 void computeACF (LOGFILES_VARIABLES fileVars, ALL_DATA *fullData)
 {
+	FILE *sampleOutput;
+	sampleOutput = fopen ("acf_sample", "w");
+
 	long long int index1d, index1d_2;
-	float mean, covariance, covariance_var, *acf;
+	float mean, covariance, covariance_var, *acf, *originalDistance;
 	acf = (float *) malloc (fileVars.currentTrajCount * sizeof (float));
+	originalDistance = (float *) malloc (fileVars.currentTrajCount * sizeof (float));
 
 	// 'i' denotes the bond pairs
 	for (int i = 0; i < fileVars.nLines; ++i)
@@ -140,7 +144,6 @@ void computeACF (LOGFILES_VARIABLES fileVars, ALL_DATA *fullData)
 		for (int j = 0; j < fileVars.currentTrajCount; ++j)
 		{
 			index1d = getIndex1d (j, i, fileVars.nLines);
-			printf("%f\n", fullData[index1d].distance);
 			mean += fullData[index1d].distance;
 		}
 		mean /= fileVars.currentTrajCount;
@@ -154,14 +157,15 @@ void computeACF (LOGFILES_VARIABLES fileVars, ALL_DATA *fullData)
 		}
 		covariance /= fileVars.currentTrajCount;
 
-		// computing autocorrelation
 		// subtracting mean from every point
 		for (int j = 0; j < fileVars.currentTrajCount; ++j)
 		{
 			index1d = getIndex1d (j, i, fileVars.nLines);
+			originalDistance[j] = fullData[index1d].distance;
 			fullData[index1d].distance -= mean;
 		}
 
+		// computing autocorrelation
 		// in this loop, 'j' is the timelag
 		for (int j = 0; j < fileVars.currentTrajCount; ++j)
 		{
@@ -178,8 +182,31 @@ void computeACF (LOGFILES_VARIABLES fileVars, ALL_DATA *fullData)
 			acf[j] /= fileVars.currentTrajCount;
 			acf[j] /= covariance;
 			index1d = getIndex1d (j, i, fileVars.nLines);
+			// fprintf(sampleOutput, "%.3f, %.3f\n", originalDistance[j], acf[j]);
 		}
+
+		printf("originalDistance[0]: %f\n", originalDistance[0]);
+		if (originalDistance[0] < 4)
+		{
+			for (int j = 0; j < fileVars.currentTrajCount; ++j)
+			{
+				fprintf(sampleOutput, "%.3f, %.3f\n", originalDistance[j], acf[j]);
+			}
+			exit (1);
+		}
+
+		// Finding the point at which the acf goes to '0'
+		// for (int j = 1; j < (fileVars.currentTrajCount - 1); ++j)
+		// {
+		// 	if ((acf[j - 1] > 0) && (acf[j + 1] < 0))
+		// 	{
+		// 		fprintf(sampleOutput, "%.3f, %d, %.3f, %.3f, %.3f\n", originalDistance[0], j, acf[j - 1], acf[j], acf[j + 1]);
+		// 		break;
+		// 	}
+		// }
 	}
+
+	fclose (sampleOutput);
 }
 
 int main(int argc, char const *argv[])
