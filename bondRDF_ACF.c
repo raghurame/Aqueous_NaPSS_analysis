@@ -126,9 +126,6 @@ LOGFILES_VARIABLES openLogFiles (FILE *mainDumpfile, float thresholdDistance, AL
 
 void computeACF (LOGFILES_VARIABLES fileVars, ALL_DATA *fullData)
 {
-	FILE *sampleOutput;
-	sampleOutput = fopen ("acf_sample", "w");
-
 	long long int index1d, index1d_2;
 	float mean, covariance, covariance_var, *acf;
 	acf = (float *) malloc (fileVars.currentTrajCount * sizeof (float));
@@ -181,13 +178,8 @@ void computeACF (LOGFILES_VARIABLES fileVars, ALL_DATA *fullData)
 			acf[j] /= fileVars.currentTrajCount;
 			acf[j] /= covariance;
 			index1d = getIndex1d (j, i, fileVars.nLines);
-			fprintf(sampleOutput, "[%.3f, %.3f, %.3f], [%.3f, %.3f, %.3f], [%.3f, %.3f, %.3f], %.3f, %.3f\n", fullData[index1d].x1, fullData[index1d].y1, fullData[index1d].z1, fullData[index1d].x2, fullData[index1d].y2, fullData[index1d].z2, fullData[index1d].x3, fullData[index1d].y3, fullData[index1d].z3, fullData[index1d].distance, acf[j]);
 		}
-		printf("\n");
-		exit (1);
 	}
-
-	fclose (sampleOutput);
 }
 
 int main(int argc, char const *argv[])
