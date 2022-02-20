@@ -1138,6 +1138,8 @@ int *computeFreeVolume_checkOccupation (int i, DUMPFILE_INFO dumpfile, DATA_ATOM
 
 	probePosition.x = dumpfile.xlo;
 
+	float xDistHalf = (dumpfile.xhi - dumpfile.xlo) / 2, yDistHalf = (dumpfile.yhi - dumpfile.ylo) / 2, zDistHalf = (dumpfile.zhi - dumpfile.zlo) / 2;
+
 	#pragma omp parallel for
 	for (int j = 0; j < freeVolumeVars.nBins_dist_x; ++j)
 	{
@@ -1156,6 +1158,11 @@ int *computeFreeVolume_checkOccupation (int i, DUMPFILE_INFO dumpfile, DATA_ATOM
 				{
 					x1 = dumpAtoms[m].x; y1 = dumpAtoms[m].y; z1 = dumpAtoms[m].z;
 					x2 = probePosition.x; y2 = probePosition.y; z2 = probePosition.z;
+
+					x2 = translatePeriodicDistance (x1, x2, xDistHalf);
+					y2 = translatePeriodicDistance (y1, y2, yDistHalf);
+					z2 = translatePeriodicDistance (z1, z2, zDistHalf);
+					
 					distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
 
 					index1d = getIndex1d_from3d (j, freeVolumeVars.nBins_dist_x, k, freeVolumeVars.nBins_dist_y, l, freeVolumeVars.nBins_dist_z);
