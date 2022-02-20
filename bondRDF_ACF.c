@@ -112,6 +112,11 @@ LOGFILES_VARIABLES openLogFiles (FILE *mainDumpfile, float thresholdDistance, AL
 				printf("reading file: %s     \r", logFilename);
 				fflush (stdout);
 				fileVars.currentTrajCount++;
+
+				if (fileVars.currentTrajCount >= 5)
+				{
+					goto earlyExit;
+				}
 			}
 
 			isTimeline = 0;
@@ -121,18 +126,37 @@ LOGFILES_VARIABLES openLogFiles (FILE *mainDumpfile, float thresholdDistance, AL
 			isTimeline = 1;
 	}
 
+	earlyExit:
+
 	return fileVars;
+}
+
+// printACF (acfOutput_file, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
+void printACF (FILE *acfOutput_file, float *originalDistance, float *acf, int currentTrajCount, float lowerLimit, float upperLimit)
+{
+	if ((originalDistance[0] < upperLimit) && (originalDistance[0] > lowerLimit))
+	{
+		for (int j = 0; j < currentTrajCount; ++j)
+		{
+			fprintf(acfOutput_file, "%.3f, %.3f\n", originalDistance[j], acf[j]);
+			fprintf(stdout, "%.3f, %.3f\n", originalDistance[j], acf[j]);
+			fflush (stdout);
+		}
+	}
 }
 
 void computeACF (LOGFILES_VARIABLES fileVars, ALL_DATA *fullData)
 {
-	FILE *sampleOutput;
-	sampleOutput = fopen ("acf_sample", "w");
-
 	long long int index1d, index1d_2;
 	float mean, covariance, covariance_var, *acf, *originalDistance;
 	acf = (float *) malloc (fileVars.currentTrajCount * sizeof (float));
 	originalDistance = (float *) malloc (fileVars.currentTrajCount * sizeof (float));
+
+	char *acfOutput_filename;
+	acfOutput_filename = (char *) malloc (50 * sizeof (char));
+
+	FILE *acfOutput_file;
+	float lowerLimit, upperLimit;
 
 	// 'i' denotes the bond pairs
 	for (int i = 0; i < fileVars.nLines; ++i)
@@ -181,36 +205,72 @@ void computeACF (LOGFILES_VARIABLES fileVars, ALL_DATA *fullData)
 
 			acf[j] /= fileVars.currentTrajCount;
 			acf[j] /= covariance;
-			index1d = getIndex1d (j, i, fileVars.nLines);
-			// fprintf(sampleOutput, "%.3f, %.3f\n", originalDistance[j], acf[j]);
+			// index1d = getIndex1d (j, i, fileVars.nLines);
 		}
 
-		printf("originalDistance[0]: %f\n", originalDistance[0]);
-		if (originalDistance[0] < 4)
+		// printing the acf function
+		snprintf (acfOutput_filename, 50, "processed_%d.rdf", i);
+		printf("%s\n", acfOutput_filename);
+		acfOutput_file = fopen (acfOutput_filename, "w");
+
+		// printing acf function for first peak
+		lowerLimit = 0; upperLimit = 1.9;
+		if ((originalDistance[0] < upperLimit) && (originalDistance[0] > lowerLimit))
 		{
+			printf("first peak\n");
+			fflush (stdout);
 			for (int j = 0; j < fileVars.currentTrajCount; ++j)
 			{
-				fprintf(sampleOutput, "%.3f, %.3f\n", originalDistance[j], acf[j]);
+				fprintf(acfOutput_file, "%.3f, %.3f\n", originalDistance[j], acf[j]);
+				fprintf(stdout, "first ==> %.3f, %.3f\n", originalDistance[j], acf[j]);
+				fflush (stdout);
+				usleep (1000000);
 			}
-			exit (1);
 		}
 
-		// Finding the point at which the acf goes to '0'
-		// for (int j = 1; j < (fileVars.currentTrajCount - 1); ++j)
-		// {
-		// 	if ((acf[j - 1] > 0) && (acf[j + 1] < 0))
-		// 	{
-		// 		fprintf(sampleOutput, "%.3f, %d, %.3f, %.3f, %.3f\n", originalDistance[0], j, acf[j - 1], acf[j], acf[j + 1]);
-		// 		break;
-		// 	}
-		// }
-	}
+		// printACF (acfOutput_file, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
 
-	fclose (sampleOutput);
+		// printing acf function for second peak
+		lowerLimit = 1.9; upperLimit = 4;
+		if ((originalDistance[0] < upperLimit) && (originalDistance[0] > lowerLimit))
+		{
+			printf("second peak\n");
+			fflush (stdout);
+			for (int j = 0; j < fileVars.currentTrajCount; ++j)
+			{
+				fprintf(acfOutput_file, "%.3f, %.3f\n", originalDistance[j], acf[j]);
+				fprintf(stdout, "second ==> %.3f, %.3f\n", originalDistance[j], acf[j]);
+				fflush (stdout);
+				usleep (1000000);
+			}
+		}
+		// printACF (acfOutput_file, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
+
+		// printing acf function for third peak
+		lowerLimit = 4; upperLimit = 6.6;
+		if ((originalDistance[0] < upperLimit) && (originalDistance[0] > lowerLimit))
+		{
+			printf("third peak\n");
+			fflush (stdout);
+			for (int j = 0; j < fileVars.currentTrajCount; ++j)
+			{
+				fprintf(acfOutput_file, "%.3f, %.3f\n", originalDistance[j], acf[j]);
+				fprintf(stdout, "third ==> %.3f, %.3f\n", originalDistance[j], acf[j]);
+				fflush (stdout);
+				usleep (1000000);
+			}
+		}
+		// printACF (acfOutput_file, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
+
+		fclose (acfOutput_file);
+	}
 }
 
 int main(int argc, char const *argv[])
 {
+	long number_of_processors = sysconf(_SC_NPROCESSORS_ONLN);
+	int nThreads = (int) number_of_processors - 1;
+
 	if (argc < 3)
 	{
 		printf("Required args:\n~~~~~~~~~~~~~~~\n\nargv[0] = ./program\nargv[1] = main dump file\nargv[2] = threshold distance to consider\n\n");
