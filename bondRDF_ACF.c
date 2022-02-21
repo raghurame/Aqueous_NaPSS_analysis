@@ -113,7 +113,7 @@ LOGFILES_VARIABLES openLogFiles (FILE *mainDumpfile, float thresholdDistance, AL
 				fflush (stdout);
 				fileVars.currentTrajCount++;
 
-				if (fileVars.currentTrajCount >= 5)
+				if (fileVars.currentTrajCount >= 1000)
 				{
 					goto earlyExit;
 				}
@@ -131,31 +131,36 @@ LOGFILES_VARIABLES openLogFiles (FILE *mainDumpfile, float thresholdDistance, AL
 	return fileVars;
 }
 
-// printACF (acfOutput_file, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
-void printACF (FILE *acfOutput_file, float *originalDistance, float *acf, int currentTrajCount, float lowerLimit, float upperLimit)
+// printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
+void printACF (int i, float *originalDistance, float *acf, int currentTrajCount, float lowerLimit, float upperLimit)
 {
 	if ((originalDistance[0] < upperLimit) && (originalDistance[0] > lowerLimit))
 	{
+		char *acfOutput_filename;
+		acfOutput_filename = (char *) malloc (50 * sizeof (char));
+
+		FILE *acfOutput_file;
+		snprintf (acfOutput_filename, 50, "bondRDF_processed/processed_%d.rdf", i);
+		acfOutput_file = fopen (acfOutput_filename, "w");
+
 		for (int j = 0; j < currentTrajCount; ++j)
 		{
 			fprintf(acfOutput_file, "%.3f, %.3f\n", originalDistance[j], acf[j]);
-			fprintf(stdout, "%.3f, %.3f\n", originalDistance[j], acf[j]);
-			fflush (stdout);
 		}
+		fclose (acfOutput_file);
+		free (acfOutput_filename);
 	}
 }
 
 void computeACF (LOGFILES_VARIABLES fileVars, ALL_DATA *fullData)
 {
+	system ("mkdir bondRDF_processed");
+
 	long long int index1d, index1d_2;
 	float mean, covariance, covariance_var, *acf, *originalDistance;
 	acf = (float *) malloc (fileVars.currentTrajCount * sizeof (float));
 	originalDistance = (float *) malloc (fileVars.currentTrajCount * sizeof (float));
 
-	char *acfOutput_filename;
-	acfOutput_filename = (char *) malloc (50 * sizeof (char));
-
-	FILE *acfOutput_file;
 	float lowerLimit, upperLimit;
 
 	// 'i' denotes the bond pairs
@@ -209,60 +214,17 @@ void computeACF (LOGFILES_VARIABLES fileVars, ALL_DATA *fullData)
 		}
 
 		// printing the acf function
-		snprintf (acfOutput_filename, 50, "processed_%d.rdf", i);
-		printf("%s\n", acfOutput_filename);
-		acfOutput_file = fopen (acfOutput_filename, "w");
-
 		// printing acf function for first peak
 		lowerLimit = 0; upperLimit = 1.9;
-		if ((originalDistance[0] < upperLimit) && (originalDistance[0] > lowerLimit))
-		{
-			printf("first peak\n");
-			fflush (stdout);
-			for (int j = 0; j < fileVars.currentTrajCount; ++j)
-			{
-				fprintf(acfOutput_file, "%.3f, %.3f\n", originalDistance[j], acf[j]);
-				fprintf(stdout, "first ==> %.3f, %.3f\n", originalDistance[j], acf[j]);
-				fflush (stdout);
-				usleep (1000000);
-			}
-		}
-
-		// printACF (acfOutput_file, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
+		printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
 
 		// printing acf function for second peak
 		lowerLimit = 1.9; upperLimit = 4;
-		if ((originalDistance[0] < upperLimit) && (originalDistance[0] > lowerLimit))
-		{
-			printf("second peak\n");
-			fflush (stdout);
-			for (int j = 0; j < fileVars.currentTrajCount; ++j)
-			{
-				fprintf(acfOutput_file, "%.3f, %.3f\n", originalDistance[j], acf[j]);
-				fprintf(stdout, "second ==> %.3f, %.3f\n", originalDistance[j], acf[j]);
-				fflush (stdout);
-				usleep (1000000);
-			}
-		}
-		// printACF (acfOutput_file, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
+		printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
 
 		// printing acf function for third peak
 		lowerLimit = 4; upperLimit = 6.6;
-		if ((originalDistance[0] < upperLimit) && (originalDistance[0] > lowerLimit))
-		{
-			printf("third peak\n");
-			fflush (stdout);
-			for (int j = 0; j < fileVars.currentTrajCount; ++j)
-			{
-				fprintf(acfOutput_file, "%.3f, %.3f\n", originalDistance[j], acf[j]);
-				fprintf(stdout, "third ==> %.3f, %.3f\n", originalDistance[j], acf[j]);
-				fflush (stdout);
-				usleep (1000000);
-			}
-		}
-		// printACF (acfOutput_file, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
-
-		fclose (acfOutput_file);
+		printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
 	}
 }
 
