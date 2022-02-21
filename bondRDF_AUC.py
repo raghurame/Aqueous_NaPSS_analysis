@@ -31,14 +31,14 @@ def getOnlyNegative (inputData):
 
 def computeTotalArea (inputData):
 	inputNumpy = n.array (inputData)
-	# showPlot (inputNumpy, "Unmodified ACF plot", "Time lag", "ACF")
+	showPlot (inputNumpy, "Unmodified ACF plot", "Time lag", "ACF")
 	totalArea = n.trapz (inputNumpy, dx = 1)
 	return totalArea
 
 def computePositiveArea (inputData):
 	inputData = getOnlyPositive (inputData)
 	inputNumpy = n.array (inputData)
-	# showPlot (inputNumpy, "Positive area", "Time lag", "ACF")
+	showPlot (inputNumpy, "Positive area", "Time lag", "ACF")
 	positiveArea = n.trapz (inputNumpy, dx = 1)
 	return positiveArea
 
