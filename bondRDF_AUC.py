@@ -13,36 +13,36 @@ def showPlot (y, title, xLabel, yLabel):
 	plt.show ()
 
 def getOnlyPositive (inputData):
-	for item in inputData:
-		if item < 0:
-			item = 0
+	for x in range (len (inputData)):
+		if inputData[x] < 0:
+			inputData[x] = 0
 
 	return inputData
 
 def getOnlyNegative (inputData):
-	for item in inputData:
-		if item > 0:
-			item = 0
+	for x in range (len (inputData)):
+		if inputData[x] > 0:
+			inputData[x] = 0
 
 	return inputData
 
 def computeTotalArea (inputData):
 	inputNumpy = n.array (inputData)
-	showPlot (inputNumpy, "Unmodified ACF plot", "Time lag", "ACF")
+	# showPlot (inputNumpy, "Unmodified ACF plot", "Time lag", "ACF")
 	totalArea = n.trapz (inputNumpy, dx = 1)
 	return totalArea
 
 def computePositiveArea (inputData):
 	inputData = getOnlyPositive (inputData)
 	inputNumpy = n.array (inputData)
-	showPlot (inputNumpy, "Positive area", "Time lag", "ACF")
+	# showPlot (inputNumpy, "Positive area", "Time lag", "ACF")
 	positiveArea = n.trapz (inputNumpy, dx = 1)
 	return positiveArea
 
 def computeNegativeArea (inputData):
 	inputData = getOnlyNegative (inputData)
 	inputNumpy = n.array (inputData)
-	showPlot (inputNumpy, "Negative area", "Time lag", "ACF")
+	# showPlot (inputNumpy, "Negative area", "Time lag", "ACF")
 	negativeArea = n.trapz (inputNumpy, dx = 1)
 	return negativeArea
 
