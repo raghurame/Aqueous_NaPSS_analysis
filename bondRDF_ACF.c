@@ -225,6 +225,10 @@ void computeACF (LOGFILES_VARIABLES fileVars, ALL_DATA *fullData)
 		// printing acf function for third peak
 		lowerLimit = 4; upperLimit = 6.6;
 		printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
+
+		// printing acf function beyond third peak for comparison
+		lowerLimit = 6.6; upperLimit = 8.6;
+		printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
 	}
 }
 
