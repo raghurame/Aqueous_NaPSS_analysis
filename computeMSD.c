@@ -522,9 +522,9 @@ float findBondCenter (float coord1, int image1, float coord2, int image2, float 
 	float bondCenter;
 
 	if (image1 > image2)
-		coord1 = xhi + coord1 - xlo;
+		coord1 += (xhi - xlo);
 	else if (image1 < image2)
-		coord1 = xlo - (xhi - coord1);
+		coord1 += (xlo - xhi);
 
 	bondCenter = ((coord1 + coord2) / 2);
 
@@ -1013,19 +1013,10 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 					bonds[j].yc = findBondCenter (bonds[j].y1, dumpAtoms[bonds[j].atom1 - 1].iy, bonds[j].y2, dumpAtoms[bonds[j].atom2 - 1].iy, dumpfile.ylo, dumpfile.yhi);
 					bonds[j].zc = findBondCenter (bonds[j].z1, dumpAtoms[bonds[j].atom1 - 1].iz, bonds[j].z2, dumpAtoms[bonds[j].atom2 - 1].iz, dumpfile.zlo, dumpfile.zhi);
 
-					// bonds[j].xc = (bonds[j].x1 + bonds[j].x2) / 2; bonds[j].yc = (bonds[j].y1 + bonds[j].y2) / 2; bonds[j].zc = (bonds[j].z1 + bonds[j].z2) / 2;
-
 					x_translated = translatePeriodicDistance (bonds[i].xc, bonds[j].xc, xDistHalf);
 					y_translated = translatePeriodicDistance (bonds[i].yc, bonds[j].yc, yDistHalf);
 					z_translated = translatePeriodicDistance (bonds[i].zc, bonds[j].zc, zDistHalf);
 
-					// if ((x_translated != bonds[j].xc) || (y_translated != bonds[j].yc) || (z_translated != bonds[j].zc))
-					// {
-					// 	printf("before translation => [%.3f, %.3f, %.3f] <=> ref: [%.3f, %.3f, %.3f]\nafter translation => [%.3f, %.3f, %.3f] <=> ref: [%.3f, %.3f, %.3f]\n\n", bonds[j].xc, bonds[j].yc, bonds[j].zc, bonds[i].xc, bonds[i].yc, bonds[i].zc, x_translated, y_translated, z_translated, bonds[i].xc, bonds[i].yc, bonds[i].zc);
-					// 	sleep (1);
-					// }
-
-					// distance = sqrt (pow ((bonds[i].xc - bonds[j].xc), 2) + pow ((bonds[i].yc - bonds[j].yc), 2) + pow ((bonds[i].zc - bonds[j].zc), 2));
 					distance = sqrt (pow ((bonds[i].xc - x_translated), 2) + pow ((bonds[i].yc - y_translated), 2) + pow ((bonds[i].zc - z_translated), 2));
 					binStart_dist_RDF = 0.0;
 
@@ -1366,21 +1357,80 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 	free (freeVolumeDist);
 }
 
-void *computeMSD (DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dumpfile, int currentDumpstep, DATA_ATOMS **initCoords)
+typedef struct computeMSDvars
 {
+	float lowerBound, upperBound;
+} MSD_VARS;
+
+void *computeMSD (DATAFILE_INFO datafile, DATA_ATOMS *dumpAtoms, DATA_BONDS *bonds, DUMPFILE_INFO dumpfile, int currentDumpstep, DATA_ATOMS **initCoords, MSD_VARS **msdVars, int nPeaks_msd, CONFIG *inputVectors)
+{
+	float xDist = (dumpfile.xhi - dumpfile.xlo), yDist = (dumpfile.yhi - dumpfile.ylo), zDist = (dumpfile.zhi - dumpfile.zlo);
+	float distance;
+	char *outputFilename;
+	outputFilename = (char *) malloc (50 * sizeof (char));
+
 	// Store initial coordinates if the currentDumpstep equals 1
 	if (currentDumpstep == 1)
 	{
 		system ("mkdir MSD_logs");
-		system ("rm MSD_logs/");
-		(*initCoords).id  = dumpAtoms.id; (*initCoords).molType = dumpAtoms.molType; (*initCoords).atomType = dumpAtoms.atomType; (*initCoords).charge = dumpAtoms.charge; (*initCoords).x  = dumpAtoms.x; (*initCoords).y = dumpAtoms.y; (*initCoords).z  = dumpAtoms.z; (*initCoords).ix  = dumpAtoms.ix; (*initCoords).iy  = dumpAtoms.iy; (*initCoords).iz  = dumpAtoms.iz; 
+		system ("mkdir MSD_logs/first");
+		system ("mkdir MSD_logs/second");
+		system ("mkdir MSD_logs/third");
+		system ("rm MSD_logs/*");
+		system ("rm MSD_logs/first/*");
+		system ("rm MSD_logs/second/*");
+		system ("rm MSD_logs/third/*");
+
+		printf("Enter the lower and upper bounds to calculate MSD\n");
+		for (int i = 0; i < nPeaks_msd; ++i)
+		{
+			printf("Lower bound for peak %d: ", i + 1); scanf ("%f", &(*msdVars)[i].lowerBound); printf("\n");
+			printf("Upper bound for peak %d: ", i + 1); scanf ("%f", &(*msdVars)[i].upperBound); printf("\n");
+		}
+
+		for (int i = 0; i < dumpfile.nAtoms; ++i)
+		{
+			(*initCoords)[i].id  = dumpAtoms[i].id; (*initCoords)[i].molType = dumpAtoms[i].molType; (*initCoords)[i].atomType = dumpAtoms[i].atomType; (*initCoords)[i].charge = dumpAtoms[i].charge; (*initCoords)[i].x  = dumpAtoms[i].x; (*initCoords)[i].y = dumpAtoms[i].y; (*initCoords)[i].z  = dumpAtoms[i].z; (*initCoords)[i].ix  = dumpAtoms[i].ix; (*initCoords)[i].iy  = dumpAtoms[i].iy; (*initCoords)[i].iz  = dumpAtoms[i].iz; 
+		}
 	}
 
 	// Calculate mean square displacement if the currentDumpstep is greater than 1
 	else if (currentDumpstep > 1)
 	{
-		/* code */
+		for (int i = 0; i < datafile.nBonds; ++i)
+		{
+			bonds[i].atom1Type = (int) dumpAtoms[bonds[i].atom1 - 1].atomType; bonds[i].atom2Type = (int) dumpAtoms[bonds[i].atom2 - 1].atomType; bonds[i].x1 = translatePeriodic (dumpAtoms[bonds[i].atom1 - 1].x, dumpAtoms[bonds[i].atom1 - 1].ix, xDist); bonds[i].y1 = translatePeriodic (dumpAtoms[bonds[i].atom1 - 1].y, dumpAtoms[bonds[i].atom1 - 1].iy, yDist); bonds[i].z1 = translatePeriodic (dumpAtoms[bonds[i].atom1 - 1].z, dumpAtoms[bonds[i].atom1 - 1].iz, zDist); bonds[i].x2 = translatePeriodic (dumpAtoms[bonds[i].atom2 - 1].x, dumpAtoms[bonds[i].atom2 - 1].ix, xDist); bonds[i].y2 = translatePeriodic (dumpAtoms[bonds[i].atom2 - 1].y, dumpAtoms[bonds[i].atom2 - 1].iy, yDist); bonds[i].z2 = translatePeriodic (dumpAtoms[bonds[i].atom2 - 1].z, dumpAtoms[bonds[i].atom2 - 1].iz, zDist); bonds[i].xc = (bonds[i].x1 + bonds[i].x2) / 2; bonds[i].yc = (bonds[i].y1 + bonds[i].y2) / 2; bonds[i].zc = (bonds[i].z1 + bonds[i].z2) / 2;
+
+			if ((bonds[i].atom1Type == inputVectors[0].atom1 && bonds[i].atom2Type == inputVectors[0].atom2) || (bonds[i].atom2Type == inputVectors[0].atom1 && bonds[i].atom1Type == inputVectors[0].atom2))
+			{
+				for (int j = 0; j < datafile.nBonds; ++j)
+				{
+					bonds[j].atom1Type = (int) dumpAtoms[bonds[j].atom1 - 1].atomType; bonds[j].atom2Type = (int) dumpAtoms[bonds[j].atom2 - 1].atomType; bonds[j].x1 = translatePeriodic (dumpAtoms[bonds[j].atom1 - 1].x, dumpAtoms[bonds[j].atom1 - 1].ix, xDist); bonds[j].y1 = translatePeriodic (dumpAtoms[bonds[j].atom1 - 1].y, dumpAtoms[bonds[j].atom1 - 1].iy, yDist); bonds[j].z1 = translatePeriodic (dumpAtoms[bonds[j].atom1 - 1].z, dumpAtoms[bonds[j].atom1 - 1].iz, zDist); bonds[j].x2 = translatePeriodic (dumpAtoms[bonds[j].atom2 - 1].x, dumpAtoms[bonds[j].atom2 - 1].ix, xDist); bonds[j].y2 = translatePeriodic (dumpAtoms[bonds[j].atom2 - 1].y, dumpAtoms[bonds[j].atom2 - 1].iy, yDist); bonds[j].z2 = translatePeriodic (dumpAtoms[bonds[j].atom2 - 1].z, dumpAtoms[bonds[j].atom2 - 1].iz, zDist); bonds[j].xc = (bonds[j].x1 + bonds[j].x2) / 2; bonds[j].yc = (bonds[j].y1 + bonds[j].y2) / 2; bonds[j].zc = (bonds[j].z1 + bonds[j].z2) / 2;
+
+					if ((bonds[j].atom1Type == inputVectors[1].atom1 && bonds[j].atom2Type == inputVectors[1].atom2) || (bonds[j].atom2Type == inputVectors[1].atom1 && bonds[j].atom1Type == inputVectors[1].atom2))
+					{
+						distance = sqrt (pow ((bonds[j].xc - bonds[i].xc), 2) + pow ((bonds[j].yc - bonds[i].yc), 2) + pow ((bonds[j].zc - bonds[i].zc), 2));
+
+						for (int k = 0; k < nPeaks_msd; ++k)
+						{
+							if (distance <= (*msdVars)[k].upperBound && distance > (*msdVars)[k].lowerBound)
+							{
+								FILE *msdOutput;
+								snprintf (outputFilename, 50, "MSD_logs/%d-%d_%d-%d_%d.msd", bonds[i].atom1, bonds[i].atom2, bonds[j].atom1, bonds[j].atom2, k + 1);
+								msdOutput = fopen (outputFilename, "a");
+
+								fprintf(msdOutput, "%d %f %f %f %f\n", currentDumpstep, distance, bonds[j].xc, bonds[j].yc, bonds[j].zc);
+
+								fclose (msdOutput);
+							}
+						}
+					}
+				}
+			}
+		}
 	}
+
+	free (outputFilename);
 }
 
 void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, CONFIG *freeVolumeconfig, CONFIG *vwdSize, NLINES_CONFIG entries, int nThreads)
@@ -1444,6 +1494,9 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	// Free volume calculations - variable set
 	FREEVOLUME_VARS freeVolumeVars;
 
+	// MSD variables
+	MSD_VARS *msdVars; int nPeaks_msd;
+
 	// Reading and processing dump information
 	while (fgets (lineString, 1000, inputDumpFile) != NULL)
 	{
@@ -1458,7 +1511,10 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 
 			freeVolumeVars = getFreeVolumeVars (dumpfile);
 
-			computeMSD (dumpAtoms, dumpfile, currentDumpstep, &initCoords);
+			printf("Enter the number of peaks to consider: "); scanf ("%d", &nPeaks_msd); printf("\n");
+			msdVars = (MSD_VARS *) malloc (nPeaks_msd * sizeof (MSD_VARS));
+
+			computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks_msd, inputVectors);
 		}
 
 		// Main processing loop
@@ -1479,7 +1535,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			// computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, nThreads);
 
 			// Calculating mean square displacement of water molecules from various layers
-			computeMSD (dumpAtoms, dumpfile, currentDumpstep, &initCoords);
+			computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks_msd, inputVectors);
 
 			isTimestep = 0;
 		}
