@@ -499,6 +499,12 @@ DUMPFILE_INFO getDumpFileInfo (FILE *inputDumpFile)
 	return dumpfile;
 }
 
+float translatePeriodic (float coord, int image, float dimension)
+{
+	coord += (image * dimension);
+	return coord;
+}
+
 float translatePeriodicDistance (float coord1, float coord2, float halfBoxDistance)
 {
 	if (abs (coord1 - coord2) > halfBoxDistance)
@@ -1360,6 +1366,23 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 	free (freeVolumeDist);
 }
 
+void *computeMSD (DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dumpfile, int currentDumpstep, DATA_ATOMS **initCoords)
+{
+	// Store initial coordinates if the currentDumpstep equals 1
+	if (currentDumpstep == 1)
+	{
+		system ("mkdir MSD_logs");
+		system ("rm MSD_logs/");
+		(*initCoords).id  = dumpAtoms.id; (*initCoords).molType = dumpAtoms.molType; (*initCoords).atomType = dumpAtoms.atomType; (*initCoords).charge = dumpAtoms.charge; (*initCoords).x  = dumpAtoms.x; (*initCoords).y = dumpAtoms.y; (*initCoords).z  = dumpAtoms.z; (*initCoords).ix  = dumpAtoms.ix; (*initCoords).iy  = dumpAtoms.iy; (*initCoords).iz  = dumpAtoms.iz; 
+	}
+
+	// Calculate mean square displacement if the currentDumpstep is greater than 1
+	else if (currentDumpstep > 1)
+	{
+		/* code */
+	}
+}
+
 void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, CONFIG *freeVolumeconfig, CONFIG *vwdSize, NLINES_CONFIG entries, int nThreads)
 {
 	DUMPFILE_INFO dumpfile;
@@ -1403,8 +1426,9 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	int isNElementsSet = 0;
 
 	// Datafile struct is used to store dump atom information
-	DATA_ATOMS *dumpAtoms, *dumpAtoms_translated;
+	DATA_ATOMS *dumpAtoms, *dumpAtoms_translated, *initCoords;
 	dumpAtoms = (DATA_ATOMS *) malloc (dumpfile.nAtoms * sizeof (DATA_ATOMS));
+	initCoords = (DATA_ATOMS *) malloc (dumpfile.nAtoms * sizeof (DATA_ATOMS));
 	dumpAtoms_translated = (DATA_ATOMS *) malloc (dumpfile.nAtoms * sizeof (DATA_ATOMS));
 
 	ORDERPARAMETER *allData_array;
@@ -1433,6 +1457,8 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			printf("Memory allocated successfully...\n");
 
 			freeVolumeVars = getFreeVolumeVars (dumpfile);
+
+			computeMSD (dumpAtoms, dumpfile, currentDumpstep, &initCoords);
 		}
 
 		// Main processing loop
@@ -1451,6 +1477,9 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 
 			// Calculating free volume distribution
 			// computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, nThreads);
+
+			// Calculating mean square displacement of water molecules from various layers
+			computeMSD (dumpAtoms, dumpfile, currentDumpstep, &initCoords);
 
 			isTimestep = 0;
 		}
