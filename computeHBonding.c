@@ -87,27 +87,58 @@ typedef struct datafileInfo
 	int nAtomTypes, nBondTypes, nAngleTypes, nDihedralTypes, nImproperTypes;
 } DATAFILE_INFO;
 
+int isFile(const char *name)
+{
+	DIR *directory = opendir (name);
+	if (directory!=NULL)
+	{
+		closedir(directory);
+		return 0;
+	}
+	if(errno==ENOTDIR)
+	{
+		return 1;
+	}
+
+	return -1;
+}
+
+int displayFiles(const char *fileExtension)
+{
+	int nFiles = 0;
+	DIR *parentDirectory;
+	parentDirectory = opendir ("./");
+
+	struct dirent *filePointer;
+	/* Scan all the files using filePointer */
+	while ((filePointer = readdir (parentDirectory)))
+	{
+		if (isFile(filePointer -> d_name) && strstr(filePointer -> d_name, fileExtension))
+		{
+			nFiles++;
+			printf("%d --> %s\n", nFiles, filePointer -> d_name);
+		}
+	}
+	return nFiles;
+}
+
 char *getInputFileName()
 {
 	int nFiles = 0;
-	char *inputFileName, fileExtension[200]/*, terminalString[200]*/;
+	char *inputFileName, fileExtension[200];
 	int fileRequired;
 	inputFileName = (char *) malloc (200 * sizeof (char));
 
 	getFilenameAgain:
 	printf("Enter the file extension or a match string to search in current directory...\n --> "); scanf ("%s", fileExtension);
-	// fgets (terminalString, sizeof (terminalString), stdin);
-	// sscanf (terminalString, "%s", fileExtension); 
 	printf("\n");
-	nFiles = displayFiles(fileExtension);
+	nFiles = displayFiles (fileExtension);
 
 	if (nFiles > 0)
 	{
 		fprintf(stdout, "\nWhich file would you like to input? Enter a number between (1 to %d): ", nFiles); 
 		fflush (stdout);
 		scanf ("%d", &fileRequired);
-		// fgets(terminalString, sizeof (terminalString), stdin);
-		// sscanf (terminalString, "%d", &fileRequired); 
 	}
 	else
 	{
@@ -352,45 +383,8 @@ DATAFILE_INFO readData (FILE *input, DATA_ATOMS **atoms, DATA_BONDS **bonds, DAT
 	return datafile;
 }
 
-int isFile(const char *name)
-{
-	DIR *directory = opendir (name);
-	if (directory!=NULL)
-	{
-		closedir(directory);
-		return 0;
-	}
-	if(errno==ENOTDIR)
-	{
-		return 1;
-	}
-
-	return -1;
-}
-
-int displayFiles(const char *fileExtension)
-{
-	int nFiles = 0;
-	DIR *parentDirectory;
-	parentDirectory = opendir ("./");
-
-	struct dirent *filePointer;
-	/* Scan all the files using filePointer */
-	while ((filePointer = readdir (parentDirectory)))
-	{
-		if (isFile(filePointer -> d_name) && strstr(filePointer -> d_name, fileExtension))
-		{
-			nFiles++;
-			printf("%d --> %s\n", nFiles, filePointer -> d_name);
-		}
-	}
-	return nFiles;
-}
-
 CONFIG *readConfig (FILE *inputConfigFile, int *nLines_return)
 {
-	(*nLines_return) = NULL;
-
 	rewind (inputConfigFile);
 	CONFIG *inputVectors;
 	char lineString[1000];
@@ -425,8 +419,6 @@ CONFIG *readConfig (FILE *inputConfigFile, int *nLines_return)
 
 CONFIG *readVWDRadius (FILE *inputVDWConfigFile, int *nLines_return)
 {
-	(*nLines_return) = NULL;
-
 	rewind (inputVDWConfigFile);
 	CONFIG *inputVectors;
 	char lineString[1000];
@@ -1360,17 +1352,226 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 	free (freeVolumeDist);
 }
 
-void computeHBonding (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, int nThreads)
+typedef struct bounds
 {
+	float lo, hi;
+} BOUNDS;
+
+DATA_ATOMS *assignPeaks (DATA_ATOMS *dumpAtoms, DATA_BONDS *bonds, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, BOUNDS *peakInfo, int nPeaks, CONFIG *inputVectors, int nThreads)
+{
+	DATA_ATOMS *dumpAtomsMod;
+	dumpAtomsMod = (DATA_ATOMS *) malloc (datafile.nAtoms * sizeof (DATA_ATOMS));
+
+	float xDist = (dumpfile.xhi - dumpfile.xlo), yDist = (dumpfile.yhi - dumpfile.ylo), zDist = (dumpfile.zhi - dumpfile.zlo), simVolume = (xDist * yDist * zDist), bondDensity;
+	float xDistHalf = (xDist / 2), yDistHalf = (yDist / 2), zDistHalf = (zDist / 2);
+	float x_translated, y_translated, z_translated;
+	float *lowerBounds, *upperBounds;
+
+	float x1, y1, z1, x2, y2, z2, distance;
+
 	for (int i = 0; i < datafile.nAtoms; ++i)
 	{
-		printf("%d %d %d %f %f %f\n", dumpAtoms[i].id, dumpAtoms[i].atomType, dumpAtoms[i].molType, dumpAtoms[i].x, dumpAtoms[i].y, dumpAtoms[i].z);
-		sleep (1);
-		// for (int j = 0; j < datafile.nAtoms; ++j)
-		// {
-			
-		// }
+		dumpAtomsMod[i].id = dumpAtoms[i].id; dumpAtomsMod[i].atomType = dumpAtoms[i].atomType; dumpAtomsMod[i].molType = 0; dumpAtomsMod[i].x = dumpAtoms[i].x; dumpAtomsMod[i].y = dumpAtoms[i].y; dumpAtomsMod[i].z = dumpAtoms[i].z;
 	}
+
+	omp_set_num_threads (nThreads);
+	#pragma omp parallel for
+	for (int i = 0; i < datafile.nBonds; ++i)
+	{
+		if ((bonds[i].atom1Type == inputVectors[0].atom1 && bonds[i].atom2Type == inputVectors[0].atom2) || (bonds[i].atom2Type == inputVectors[0].atom1 && bonds[i].atom1Type == inputVectors[0].atom2))
+		{
+			bonds[i].atom1Type = (int) dumpAtoms[bonds[i].atom1 - 1].atomType; bonds[i].atom2Type = (int) dumpAtoms[bonds[i].atom2 - 1].atomType;
+			bonds[i].x1 = dumpAtoms[bonds[i].atom1 - 1].x; bonds[i].y1 = dumpAtoms[bonds[i].atom1 - 1].y; bonds[i].z1 = dumpAtoms[bonds[i].atom1 - 1].z;
+			bonds[i].x2 = dumpAtoms[bonds[i].atom2 - 1].x; bonds[i].y2 = dumpAtoms[bonds[i].atom2 - 1].y; bonds[i].z2 = dumpAtoms[bonds[i].atom2 - 1].z;
+
+			bonds[i].xc = findBondCenter (bonds[i].x1, dumpAtoms[bonds[i].atom1 - 1].ix, bonds[i].x2, dumpAtoms[bonds[i].atom2 - 1].ix, dumpfile.xlo, dumpfile.xhi);
+			bonds[i].yc = findBondCenter (bonds[i].y1, dumpAtoms[bonds[i].atom1 - 1].iy, bonds[i].y2, dumpAtoms[bonds[i].atom2 - 1].iy, dumpfile.ylo, dumpfile.yhi);
+			bonds[i].zc = findBondCenter (bonds[i].z1, dumpAtoms[bonds[i].atom1 - 1].iz, bonds[i].z2, dumpAtoms[bonds[i].atom2 - 1].iz, dumpfile.zlo, dumpfile.zhi);
+
+			for (int j = 0; j < datafile.nBonds; ++j)
+			{
+				if ((bonds[j].atom1Type == inputVectors[1].atom1 && bonds[j].atom2Type == inputVectors[1].atom2) || (bonds[j].atom2Type == inputVectors[1].atom1 && bonds[j].atom1Type == inputVectors[1].atom2))
+				{
+					bonds[j].atom1Type = (int) dumpAtoms[bonds[j].atom1 - 1].atomType; bonds[j].atom2Type = (int) dumpAtoms[bonds[j].atom2 - 1].atomType;
+					bonds[j].x1 = dumpAtoms[bonds[j].atom1 - 1].x; bonds[j].y1 = dumpAtoms[bonds[j].atom1 - 1].y; bonds[j].z1 = dumpAtoms[bonds[j].atom1 - 1].z;
+					bonds[j].x2 = dumpAtoms[bonds[j].atom2 - 1].x; bonds[j].y2 = dumpAtoms[bonds[j].atom2 - 1].y; bonds[j].z2 = dumpAtoms[bonds[j].atom2 - 1].z;
+
+					bonds[j].xc = findBondCenter (bonds[j].x1, dumpAtoms[bonds[j].atom1 - 1].ix, bonds[j].x2, dumpAtoms[bonds[j].atom2 - 1].ix, dumpfile.xlo, dumpfile.xhi);
+					bonds[j].yc = findBondCenter (bonds[j].y1, dumpAtoms[bonds[j].atom1 - 1].iy, bonds[j].y2, dumpAtoms[bonds[j].atom2 - 1].iy, dumpfile.ylo, dumpfile.yhi);
+					bonds[j].zc = findBondCenter (bonds[j].z1, dumpAtoms[bonds[j].atom1 - 1].iz, bonds[j].z2, dumpAtoms[bonds[j].atom2 - 1].iz, dumpfile.zlo, dumpfile.zhi);
+
+					x_translated = translatePeriodicDistance (bonds[i].xc, bonds[j].xc, xDistHalf);
+					y_translated = translatePeriodicDistance (bonds[i].yc, bonds[j].yc, yDistHalf);
+					z_translated = translatePeriodicDistance (bonds[i].zc, bonds[j].zc, zDistHalf);
+
+					distance = sqrt (pow ((bonds[i].xc - x_translated), 2) + pow ((bonds[i].yc - y_translated), 2) + pow ((bonds[i].zc - z_translated), 2));
+
+					for (int k = 0; k < nPeaks; ++k)
+					{
+						if ((distance <= peakInfo[k].hi) && (distance > peakInfo[k].lo))
+						{
+							if ((dumpAtomsMod[bonds[j].atom1 - 1].molType == 0) || (dumpAtomsMod[bonds[j].atom1 - 1].molType > (k + 1)))
+								dumpAtomsMod[bonds[j].atom1 - 1].molType = (k + 1);
+
+							if ((dumpAtomsMod[bonds[j].atom2 - 1].molType == 0) || (dumpAtomsMod[bonds[j].atom2 - 1].molType > (k + 1)))
+								dumpAtomsMod[bonds[j].atom2 - 1].molType = (k + 1);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return dumpAtomsMod;
+}
+
+typedef struct HBondNetwork
+{
+	int bondPresent, bondAbsent;
+} HBONDNETWORK;
+
+void analyzeHBondNetwork (DATA_ATOMS *dumpAtomsMod, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, CONFIG *inputVectors, BOUNDS *peakInfo, int nPeaks, float peakHBondPosition, int nThreads)
+{
+	float x_translated, y_translated, z_translated, distance;
+	float xDistHalf = (dumpfile.xhi - dumpfile.xlo) / 2, yDistHalf = (dumpfile.yhi - dumpfile.ylo) / 2, zDistHalf = (dumpfile.zhi - dumpfile.zlo) / 2;
+
+	// Initializing variables to store bond network information
+	int *nHBonds, *nMolecules;
+	nHBonds = (int *) calloc ((nPeaks - 1), sizeof (int));
+	nMolecules = (int *) calloc (nPeaks + 1, sizeof (int));
+
+	// Writing the output to logfile
+	FILE *hBondNetwork_logfile;
+	hBondNetwork_logfile = fopen ("hBondNetwork_logs/hBondNetwork.log", "a");
+
+	int loopCounter = 0, index;
+
+	// Iterating through all atom pairs to check the H-O distance
+	omp_set_num_threads (nThreads); printf("\n");
+	for (int i = 0; i < datafile.nAtoms; ++i)
+	{
+		if (dumpAtomsMod[i].atomType == inputVectors[1].atom1 || dumpAtomsMod[i].atomType == inputVectors[1].atom2)
+		{
+			#pragma omp parallel for
+			for (int j = 0; j < datafile.nAtoms; ++j)
+			{
+				if (dumpAtomsMod[j].atomType == inputVectors[1].atom1 || dumpAtomsMod[j].atomType == inputVectors[1].atom2)
+				{
+					loopCounter++;
+					if ((loopCounter % 10000) == 0)
+					{
+						printf("Analysing H-bond networks: %d\r", loopCounter);
+						fflush (stdout);
+					}
+
+
+					x_translated = translatePeriodicDistance (dumpAtomsMod[i].x, dumpAtomsMod[j].x, xDistHalf);
+					y_translated = translatePeriodicDistance (dumpAtomsMod[i].y, dumpAtomsMod[j].y, yDistHalf);
+					z_translated = translatePeriodicDistance (dumpAtomsMod[i].z, dumpAtomsMod[j].z, zDistHalf);
+
+					distance = sqrt (pow ((dumpAtomsMod[i].x - x_translated), 2) + pow ((dumpAtomsMod[i].y - y_translated), 2) + pow ((dumpAtomsMod[i].z - z_translated), 2));
+
+					if ((distance < peakHBondPosition) && (abs (dumpAtomsMod[i].molType - dumpAtomsMod[j].molType) == 1))
+					{
+						// If molType of [i] == 2 && molType of [j] == 1,
+						// then the pair belongs to first and second layer
+						// (i.e), if (molType i - molType j) == 1, then store the bondPresent and bondAbsent stats to [molType i - 2] array index
+
+						if (dumpAtomsMod[i].molType > dumpAtomsMod[j].molType)
+							index = dumpAtomsMod[i].molType - 2;
+						else
+							index = dumpAtomsMod[j].molType - 2;
+
+						nHBonds[index]++;
+					}
+				}
+			}
+
+			// Counting the number of molecules in every shell
+			nMolecules[ dumpAtomsMod[i].molType ]++;
+		}
+	}
+	printf("\n");
+
+	for (int i = 0; i < (nPeaks - 1); ++i)
+		fprintf(hBondNetwork_logfile, "%d, ", nHBonds[i]);
+
+	for (int i = 0; i < nPeaks; ++i)
+		fprintf(hBondNetwork_logfile, "%d, ", nMolecules[i]);
+
+	fprintf(hBondNetwork_logfile, "%d\n", nMolecules[nPeaks]);
+
+	fclose (hBondNetwork_logfile);
+}
+
+void computeHBonding (DATA_ATOMS *dumpAtoms, DATA_BONDS *bonds, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, BOUNDS *peakInfo, int nPeaks, CONFIG *inputVectors, NLINES_CONFIG entries, float peakHBondPosition, int nThreads)
+{
+	DATA_ATOMS *dumpAtomsMod;
+	dumpAtomsMod = assignPeaks (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, nThreads);
+
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// Checking the previous assignment
+	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	int nZeroth = 0, nFirst = 0, nSecond = 0, nThird = 0, nFourth = 0;
+	for (int i = 0; i < datafile.nAtoms; ++i)
+	{
+		// printf("%d %d %d\n", dumpAtomsMod[i].id, dumpAtomsMod[i].atomType, dumpAtomsMod[i].molType); usleep (10000);
+		if (dumpAtomsMod[i].molType == 0)
+			nZeroth++;
+		if (dumpAtomsMod[i].molType == 1)
+			nFirst++;
+		if (dumpAtomsMod[i].molType == 2)
+			nSecond++;
+		if (dumpAtomsMod[i].molType == 3)
+			nThird++;
+		if (dumpAtomsMod[i].molType == 4)
+			nFourth++;
+	}
+	printf("Zeroth: %d\nFirst: %d\nSecond: %d\nThird: %d\nFourth: %d\n", nZeroth, nFirst, nSecond, nThird, nFourth);
+
+	// Compute correlation of H-bonds
+
+	// Quantify H-bond network
+	// (i.e) Number of H-bonds between different peaks
+	// Find average and standard deviation of the above quantity
+	analyzeHBondNetwork (dumpAtomsMod, datafile, dumpfile, inputVectors, peakInfo, nPeaks, peakHBondPosition, nThreads);
+
+	// Check the H-bond lifetime using the correlation function.
+	// Calculate both C(t) and S(t)
+
+}
+
+BOUNDS *getHBondPeakInformation (int *nPeaks)
+{
+	printf("How many peaks to assign?: "); scanf ("%d", &(*nPeaks)); printf("\n");
+	BOUNDS *peakInfo;
+	peakInfo = (BOUNDS *) malloc ((*nPeaks) * sizeof (BOUNDS));
+
+	for (int i = 0; i < (*nPeaks); ++i)
+	{
+		printf("Enter the lower bounds for peak %d: ", i + 1); scanf ("%f", &peakInfo[i].lo); printf("\n");
+		printf("Enter the upper bounds for peak %d: ", i + 1); scanf ("%f", &peakInfo[i].hi); printf("\n");
+	}
+
+	return peakInfo;
+}
+
+float getHBondPeakPosition ()
+{
+	float thresholdHBondDistance;
+	printf("Enter the threshold distance to consider for H-bonding: "); scanf ("%f", &thresholdHBondDistance);
+	return thresholdHBondDistance;
+}
+
+void initializeHBondNetworkLogfile ()
+{
+	FILE *hBondNetwork_logfile;
+	hBondNetwork_logfile = fopen ("hBondNetwork_logs/hBondNetwork.log", "w");
+
+	// Writing the first line
+	fprintf(hBondNetwork_logfile, "N firstToSecond, N secondToThird, N thirdToFourth, N Mols First, N Mols Second, N Mols Third, N Mols Fourth\n");
+
+	fclose (hBondNetwork_logfile);
 }
 
 void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, CONFIG *freeVolumeconfig, CONFIG *vwdSize, NLINES_CONFIG entries, int nThreads)
@@ -1433,6 +1634,9 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	// Free volume calculations - variable set
 	FREEVOLUME_VARS freeVolumeVars;
 
+	// Assigning peaks
+	BOUNDS *peakInfo; int nPeaks; float peakHBondPosition;
+
 	// Reading and processing dump information
 	while (fgets (lineString, 1000, inputDumpFile) != NULL)
 	{
@@ -1446,6 +1650,13 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			printf("Memory allocated successfully...\n");
 
 			freeVolumeVars = getFreeVolumeVars (dumpfile);
+
+			// Gathering peak information for analysing H-bonds
+			peakInfo = getHBondPeakInformation (&nPeaks);
+			peakHBondPosition = getHBondPeakPosition ();
+			initializeHBondNetworkLogfile ();
+			printf("HBond network file initialized successfully...\n");
+			fflush (stdout);
 		}
 
 		// Main processing loop
@@ -1466,7 +1677,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			// computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, nThreads);
 
 			// Computing H bond lifetime and frequency
-			computeHBonding (dumpAtoms, datafile, dumpfile, entries, nThreads);
+			computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, nThreads);
 
 			isTimestep = 0;
 		}
@@ -1504,6 +1715,7 @@ int main(int argc, char const *argv[])
 {
 	system ("mkdir logs");
 	system ("mkdir bondRDF_logs");
+	system ("mkdir hBondNetwork_logs");
 
 	long number_of_processors = sysconf(_SC_NPROCESSORS_ONLN);
 	int nThreads = (int) number_of_processors - 1;
