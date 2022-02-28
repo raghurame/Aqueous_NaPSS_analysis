@@ -1494,7 +1494,7 @@ void analyzeHBondNetwork (DATA_ATOMS *dumpAtomsMod, DATAFILE_INFO datafile, DUMP
 	printf("\n");
 
 	for (int i = 0; i < (nPeaks - 1); ++i)
-		fprintf(hBondNetwork_logfile, "%d, ", nHBonds[i]);
+		fprintf(hBondNetwork_logfile, "%.0f, ", (float) (nHBonds[i] / 2));
 
 	for (int i = 0; i < nPeaks; ++i)
 		fprintf(hBondNetwork_logfile, "%d, ", nMolecules[i]);
@@ -1569,7 +1569,7 @@ void initializeHBondNetworkLogfile ()
 	hBondNetwork_logfile = fopen ("hBondNetwork_logs/hBondNetwork.log", "w");
 
 	// Writing the first line
-	fprintf(hBondNetwork_logfile, "N firstToSecond, N secondToThird, N thirdToFourth, N Mols First, N Mols Second, N Mols Third, N Mols Fourth\n");
+	fprintf(hBondNetwork_logfile, "N firstToSecond, N secondToThird, N thirdToFourth, N Mols Zeroth, N Mols First, N Mols Second, N Mols Third, N Mols Fourth\n");
 
 	fclose (hBondNetwork_logfile);
 }
