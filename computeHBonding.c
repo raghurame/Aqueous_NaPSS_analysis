@@ -1430,7 +1430,7 @@ typedef struct HBondNetwork
 	int bondPresent, bondAbsent;
 } HBONDNETWORK;
 
-void analyzeHBondNetwork (DATA_ATOMS *dumpAtomsMod, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, CONFIG *inputVectors, BOUNDS *peakInfo, int nPeaks, float peakHBondPosition, int nThreads)
+void analyzeHBondNetwork (DATA_ATOMS *dumpAtomsMod, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, CONFIG *inputVectors, BOUNDS *peakInfo, int nPeaks, float peakHBondPosition, int currentDumpstep, int nThreads)
 {
 	float x_translated, y_translated, z_translated, distance;
 	float xDistHalf = (dumpfile.xhi - dumpfile.xlo) / 2, yDistHalf = (dumpfile.yhi - dumpfile.ylo) / 2, zDistHalf = (dumpfile.zhi - dumpfile.zlo) / 2;
@@ -1446,31 +1446,34 @@ void analyzeHBondNetwork (DATA_ATOMS *dumpAtomsMod, DATAFILE_INFO datafile, DUMP
 
 	int loopCounter = 0, index;
 
+	char *connectivityInfo_filename;
+	connectivityInfo_filename = (char *) malloc (200 * sizeof (char));
+
 	// Iterating through all atom pairs to check the H-O distance
 	omp_set_num_threads (nThreads); printf("\n");
+	#pragma omp parallel for
 	for (int i = 0; i < datafile.nAtoms; ++i)
 	{
+		loopCounter++;
+		if ((loopCounter % 1000) == 0)
+		{
+			printf("Checking h-bond networks... %2.3f %%\r", (float) loopCounter * 100.0 / (float) datafile.nAtoms);
+			fflush (stdout);
+		}
+
 		if (dumpAtomsMod[i].atomType == inputVectors[1].atom1 || dumpAtomsMod[i].atomType == inputVectors[1].atom2)
 		{
-			#pragma omp parallel for
 			for (int j = 0; j < datafile.nAtoms; ++j)
 			{
 				if (dumpAtomsMod[j].atomType == inputVectors[1].atom1 || dumpAtomsMod[j].atomType == inputVectors[1].atom2)
 				{
-					loopCounter++;
-					if ((loopCounter % 10000) == 0)
-					{
-						printf("Analysing H-bond networks: %d\r", loopCounter);
-						fflush (stdout);
-					}
-
-
 					x_translated = translatePeriodicDistance (dumpAtomsMod[i].x, dumpAtomsMod[j].x, xDistHalf);
 					y_translated = translatePeriodicDistance (dumpAtomsMod[i].y, dumpAtomsMod[j].y, yDistHalf);
 					z_translated = translatePeriodicDistance (dumpAtomsMod[i].z, dumpAtomsMod[j].z, zDistHalf);
 
 					distance = sqrt (pow ((dumpAtomsMod[i].x - x_translated), 2) + pow ((dumpAtomsMod[i].y - y_translated), 2) + pow ((dumpAtomsMod[i].z - z_translated), 2));
 
+					// Counting the number of H-bonds between the layers
 					if ((distance < peakHBondPosition) && (abs (dumpAtomsMod[i].molType - dumpAtomsMod[j].molType) == 1))
 					{
 						// If molType of [i] == 2 && molType of [j] == 1,
@@ -1478,12 +1481,51 @@ void analyzeHBondNetwork (DATA_ATOMS *dumpAtomsMod, DATAFILE_INFO datafile, DUMP
 						// (i.e), if (molType i - molType j) == 1, then store the bondPresent and bondAbsent stats to [molType i - 2] array index
 
 						if (dumpAtomsMod[i].molType > dumpAtomsMod[j].molType)
+						{
 							index = dumpAtomsMod[i].molType - 2;
+
+							snprintf (connectivityInfo_filename, 200, "hBondNetwork_logs/%d-%d_hBond.log", dumpAtomsMod[j].id, dumpAtomsMod[i].id);
+							FILE *connectivityInfo_file;
+							connectivityInfo_file = fopen (connectivityInfo_filename, "a");
+							fprintf(connectivityInfo_file, "%d\n", currentDumpstep);
+							fclose (connectivityInfo_file);
+						}
 						else
+						{
 							index = dumpAtomsMod[j].molType - 2;
+
+							snprintf (connectivityInfo_filename, 200, "hBondNetwork_logs/%d-%d_hBond.log", dumpAtomsMod[i].id, dumpAtomsMod[j].id);
+							FILE *connectivityInfo_file;
+							connectivityInfo_file = fopen (connectivityInfo_filename, "a");
+							fprintf(connectivityInfo_file, "%d\n", currentDumpstep);
+							fclose (connectivityInfo_file);
+						}
 
 						nHBonds[index]++;
 					}
+
+					// creating logfile containing the currentDumpstep and connectivity information
+					// connectivity information: 1 => connected; 0 => not connected.
+					// it is not necessary to print '0' to the log file
+					// if ((distance < peakHBondPosition))
+					// {
+					// 	if (dumpAtomsMod[i].id > dumpAtomsMod[j].id)
+					// 	{
+					// 		snprintf (connectivityInfo_filename, 200, "hBondNetwork_logs/%d-%d_hBond.log", dumpAtomsMod[j].id, dumpAtomsMod[i].id);
+					// 		FILE *connectivityInfo_file;
+					// 		connectivityInfo_file = fopen (connectivityInfo_filename, "a");
+					// 		fprintf(connectivityInfo_file, "%d\n", currentDumpstep);
+					// 		fclose (connectivityInfo_file);
+					// 	}
+					// 	else
+					// 	{
+					// 		snprintf (connectivityInfo_filename, 200, "hBondNetwork_logs/%d-%d_hBond.log", dumpAtomsMod[i].id, dumpAtomsMod[j].id);
+					// 		FILE *connectivityInfo_file;
+					// 		connectivityInfo_file = fopen (connectivityInfo_filename, "a");
+					// 		fprintf(connectivityInfo_file, "%d\n", currentDumpstep);
+					// 		fclose (connectivityInfo_file);
+					// 	}
+					// }
 				}
 			}
 
@@ -1493,6 +1535,10 @@ void analyzeHBondNetwork (DATA_ATOMS *dumpAtomsMod, DATAFILE_INFO datafile, DUMP
 	}
 	printf("\n");
 
+	// In output, the final result is divided by 2.
+	// Because every bond was counted twice.
+	// (i.e) once when counting first to second layer,
+	// another time when counting from second to first layer.
 	for (int i = 0; i < (nPeaks - 1); ++i)
 		fprintf(hBondNetwork_logfile, "%.0f, ", (float) (nHBonds[i] / 2));
 
@@ -1504,40 +1550,70 @@ void analyzeHBondNetwork (DATA_ATOMS *dumpAtomsMod, DATAFILE_INFO datafile, DUMP
 	fclose (hBondNetwork_logfile);
 }
 
-void computeHBonding (DATA_ATOMS *dumpAtoms, DATA_BONDS *bonds, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, BOUNDS *peakInfo, int nPeaks, CONFIG *inputVectors, NLINES_CONFIG entries, float peakHBondPosition, int nThreads)
+void computeHBondLifetime (DATA_ATOMS *dumpAtomsMod, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, CONFIG *inputVectors, BOUNDS *peakInfo, int nPeaks, float peakHBondPosition, int currentDumpstep, int nThreads)
+{
+	// Calculate HBond correlation for dipoles in the first, second, and third peak. 
+	// Compare the HBond correlation of various peaks with that of the bulk.
+	// Build neighbour lists for dipoles (O and H) in the four peaks at every timestep
+	// Using the neighbour list, store the bonded H/O atoms (this is called bonded list)
+	// 
+
+	// Second approach
+	// Search for H-bond between the layers
+	// Once a bond is found, create (an array or a variable or a file) for that pair
+	// if the same pair is found in the next timestep, (increment a variable or append value)
+	// extent of time (t_{bonded}) for which the bond stays connected is recorded
+	// The value of "h_{alpha} (0) x h_{alpha} (t)" will be equal to 1 if t < t_{bonded},
+	// and it'll be 0 if t > t_{bonded}.
+
+	// Third approach
+	// Search for H-bond between the layers
+	// Once a bond is found, create a logfile for that pair
+	// (is it possible to do the same without logfile and using arrays?)
+	// NOTE: Implementing this using arrays may not be possible without using dict
+	// It is better to proceed this using logfiles (like previous implementation of log files)
+	// If a bond is present, append 1. Else, append 0.
+	// Instead of appending 0, it is better to include time information (currentDumpstep). 
+	// This way, we don't write unnecessary lines to logfile and skip writing zeroes
+
+	// Iterating through all atom pairs to check the H-O distance
+}
+
+void computeHBonding (DATA_ATOMS *dumpAtoms, DATA_BONDS *bonds, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, BOUNDS *peakInfo, int nPeaks, CONFIG *inputVectors, NLINES_CONFIG entries, float peakHBondPosition, int currentDumpstep, int nThreads)
 {
 	DATA_ATOMS *dumpAtomsMod;
 	dumpAtomsMod = assignPeaks (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, nThreads);
 
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// Checking the previous assignment
-	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	int nZeroth = 0, nFirst = 0, nSecond = 0, nThird = 0, nFourth = 0;
-	for (int i = 0; i < datafile.nAtoms; ++i)
-	{
-		// printf("%d %d %d\n", dumpAtomsMod[i].id, dumpAtomsMod[i].atomType, dumpAtomsMod[i].molType); usleep (10000);
-		if (dumpAtomsMod[i].molType == 0)
-			nZeroth++;
-		if (dumpAtomsMod[i].molType == 1)
-			nFirst++;
-		if (dumpAtomsMod[i].molType == 2)
-			nSecond++;
-		if (dumpAtomsMod[i].molType == 3)
-			nThird++;
-		if (dumpAtomsMod[i].molType == 4)
-			nFourth++;
-	}
-	printf("Zeroth: %d\nFirst: %d\nSecond: %d\nThird: %d\nFourth: %d\n", nZeroth, nFirst, nSecond, nThird, nFourth);
+	// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// // Checking the previous assignment
+	// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	// int nZeroth = 0, nFirst = 0, nSecond = 0, nThird = 0, nFourth = 0;
+	// for (int i = 0; i < datafile.nAtoms; ++i)
+	// {
+	// 	// printf("%d %d %d\n", dumpAtomsMod[i].id, dumpAtomsMod[i].atomType, dumpAtomsMod[i].molType); usleep (10000);
+	// 	if (dumpAtomsMod[i].molType == 0)
+	// 		nZeroth++;
+	// 	if (dumpAtomsMod[i].molType == 1)
+	// 		nFirst++;
+	// 	if (dumpAtomsMod[i].molType == 2)
+	// 		nSecond++;
+	// 	if (dumpAtomsMod[i].molType == 3)
+	// 		nThird++;
+	// 	if (dumpAtomsMod[i].molType == 4)
+	// 		nFourth++;
+	// }
+	// printf("Zeroth: %d\nFirst: %d\nSecond: %d\nThird: %d\nFourth: %d\n", nZeroth, nFirst, nSecond, nThird, nFourth);
 
 	// Compute correlation of H-bonds
 
 	// Quantify H-bond network
 	// (i.e) Number of H-bonds between different peaks
 	// Find average and standard deviation of the above quantity
-	analyzeHBondNetwork (dumpAtomsMod, datafile, dumpfile, inputVectors, peakInfo, nPeaks, peakHBondPosition, nThreads);
+	analyzeHBondNetwork (dumpAtomsMod, datafile, dumpfile, inputVectors, peakInfo, nPeaks, peakHBondPosition, currentDumpstep, nThreads);
 
 	// Check the H-bond lifetime using the correlation function.
 	// Calculate both C(t) and S(t)
+	// computeHBondLifetime (dumpAtomsMod, datafile, dumpfile, inputVectors, peakInfo, nPeaks, peakHBondPosition, currentDumpstep, nThreads);
 
 }
 
@@ -1677,7 +1753,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			// computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, nThreads);
 
 			// Computing H bond lifetime and frequency
-			computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, nThreads);
+			computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, currentDumpstep, nThreads);
 
 			isTimestep = 0;
 		}
