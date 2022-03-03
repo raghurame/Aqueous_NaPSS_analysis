@@ -1484,21 +1484,27 @@ void analyzeHBondNetwork (DATA_ATOMS *dumpAtomsMod, DATAFILE_INFO datafile, DUMP
 						{
 							index = dumpAtomsMod[i].molType - 2;
 
-							snprintf (connectivityInfo_filename, 200, "hBondNetwork_logs/%d-%d_hBond.log", dumpAtomsMod[j].id, dumpAtomsMod[i].id);
-							FILE *connectivityInfo_file;
-							connectivityInfo_file = fopen (connectivityInfo_filename, "a");
-							fprintf(connectivityInfo_file, "%d\n", currentDumpstep);
-							fclose (connectivityInfo_file);
+							if (index >= 0)
+							{
+								snprintf (connectivityInfo_filename, 200, "hBondNetwork_logs/%d-%d-%d_hBond.log", dumpAtomsMod[j].id, dumpAtomsMod[i].id, index);
+								FILE *connectivityInfo_file;
+								connectivityInfo_file = fopen (connectivityInfo_filename, "a");
+								fprintf(connectivityInfo_file, "%d\n", currentDumpstep);
+								fclose (connectivityInfo_file);
+							}
 						}
 						else
 						{
 							index = dumpAtomsMod[j].molType - 2;
 
-							snprintf (connectivityInfo_filename, 200, "hBondNetwork_logs/%d-%d_hBond.log", dumpAtomsMod[i].id, dumpAtomsMod[j].id);
-							FILE *connectivityInfo_file;
-							connectivityInfo_file = fopen (connectivityInfo_filename, "a");
-							fprintf(connectivityInfo_file, "%d\n", currentDumpstep);
-							fclose (connectivityInfo_file);
+							if (index >= 0)
+							{
+								snprintf (connectivityInfo_filename, 200, "hBondNetwork_logs/%d-%d-%d_hBond.log", dumpAtomsMod[i].id, dumpAtomsMod[j].id, index);
+								FILE *connectivityInfo_file;
+								connectivityInfo_file = fopen (connectivityInfo_filename, "a");
+								fprintf(connectivityInfo_file, "%d\n", currentDumpstep);
+								fclose (connectivityInfo_file);
+							}
 						}
 
 						nHBonds[index]++;
@@ -1533,7 +1539,6 @@ void analyzeHBondNetwork (DATA_ATOMS *dumpAtomsMod, DATAFILE_INFO datafile, DUMP
 			nMolecules[ dumpAtomsMod[i].molType ]++;
 		}
 	}
-	printf("\n");
 
 	// In output, the final result is divided by 2.
 	// Because every bond was counted twice.
@@ -1550,33 +1555,151 @@ void analyzeHBondNetwork (DATA_ATOMS *dumpAtomsMod, DATAFILE_INFO datafile, DUMP
 	fclose (hBondNetwork_logfile);
 }
 
-void computeHBondLifetime (DATA_ATOMS *dumpAtomsMod, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, CONFIG *inputVectors, BOUNDS *peakInfo, int nPeaks, float peakHBondPosition, int currentDumpstep, int nThreads)
+float *findHBondCorrelation (const char *filename, int nTimeframes, int nThreads)
 {
-	// Calculate HBond correlation for dipoles in the first, second, and third peak. 
-	// Compare the HBond correlation of various peaks with that of the bulk.
-	// Build neighbour lists for dipoles (O and H) in the four peaks at every timestep
-	// Using the neighbour list, store the bonded H/O atoms (this is called bonded list)
-	// 
+	char lineString[1000], *hBondLogfilename;
+	hBondLogfilename = (char *) malloc (100 * sizeof (char));
+	snprintf (hBondLogfilename, 100, "./hBondNetwork_logs/%s", filename);
 
-	// Second approach
-	// Search for H-bond between the layers
-	// Once a bond is found, create (an array or a variable or a file) for that pair
-	// if the same pair is found in the next timestep, (increment a variable or append value)
-	// extent of time (t_{bonded}) for which the bond stays connected is recorded
-	// The value of "h_{alpha} (0) x h_{alpha} (t)" will be equal to 1 if t < t_{bonded},
-	// and it'll be 0 if t > t_{bonded}.
+	FILE *hBondLogfile;
+	hBondLogfile = fopen (hBondLogfilename, "r");
 
-	// Third approach
-	// Search for H-bond between the layers
-	// Once a bond is found, create a logfile for that pair
-	// (is it possible to do the same without logfile and using arrays?)
-	// NOTE: Implementing this using arrays may not be possible without using dict
-	// It is better to proceed this using logfiles (like previous implementation of log files)
-	// If a bond is present, append 1. Else, append 0.
-	// Instead of appending 0, it is better to include time information (currentDumpstep). 
-	// This way, we don't write unnecessary lines to logfile and skip writing zeroes
+	// *inputValue contains information about the presence/absence of h-bond
+	int lineInt;
+	int mean = 0, covariance = 0;
 
-	// Iterating through all atom pairs to check the H-O distance
+	float *hBondInfo;
+	hBondInfo = (float *) calloc (nTimeframes, sizeof (float));
+
+	// Correlation variable
+	float *correlation;
+	correlation = (float *) calloc (nTimeframes, sizeof (float));
+
+	// A value of '1' is assigned when h-bond is present
+	while ((fgets (lineString, 1000, hBondLogfile) != NULL))
+	{
+		sscanf (lineString, "%d", &lineInt);
+		hBondInfo[lineInt] = 1.0;
+	}
+
+	// Calculate H-bond correlation (not the classic autocorrelation function)
+	// 'i' represents timelag
+	for (int i = 0; i < nTimeframes; ++i)
+	{
+		// Iterating through all the elements
+		for (int j = 0; j < (nTimeframes - i); ++j)
+		{
+			// Calculate h(0).h(t) and find the average
+			correlation[i] += hBondInfo[j] * hBondInfo[j + i];
+		}
+	}
+
+	for (int i = 0; i < nTimeframes; ++i)
+	{
+		correlation[i] /= nTimeframes;
+	}
+
+	fclose (hBondLogfile);
+	return correlation;
+}
+
+int countNTimeframes (FILE *inputDumpFile)
+{
+	rewind (inputDumpFile);
+
+	int nLines = 0, nTimeframes;
+	char lineString[1000];
+
+	DUMPFILE_INFO dumpfile;
+	dumpfile = getDumpFileInfo (inputDumpFile);
+
+	while ((fgets (lineString, 1000, inputDumpFile) != NULL))
+	{
+		nLines++;
+	}
+
+	rewind (inputDumpFile);
+
+	printf("Number of lines in the input dumpfile: %d\n", nLines);
+	nTimeframes = nLines / (dumpfile.nAtoms + 9);
+	printf("Number of timeframes: %d\n", nTimeframes);
+
+	return nTimeframes;
+}
+
+void calculateSumCorrelation (float *correlation, float **sumCorrelation, int nTimeframes)
+{
+	for (int i = 0; i < nTimeframes; ++i)
+	{
+		(*sumCorrelation)[i] += correlation[i];
+	}
+}
+
+float *calculateAverageCorrelation (float *sumCorrelation, int nFiles, int nTimeframes)
+{
+	float *avgCorrelation;
+	avgCorrelation = (float *) malloc (nTimeframes * sizeof (float));
+
+	for (int i = 0; i < nTimeframes; ++i)
+	{
+		avgCorrelation[i] = sumCorrelation[i] / nFiles;
+	}
+
+	return avgCorrelation;
+}
+
+void computeHBondCorrelation2 (const char *fileTemplate, int nTimeframes, int nThreads)
+{
+	// Create two float arrays, with size equal to the number of timesteps in dump file
+	float *avgCorrelation, *sumCorrelation, *correlation;
+	sumCorrelation = (float *) calloc (nTimeframes, sizeof (float));
+	correlation = (float *) malloc (nTimeframes * sizeof (float));
+
+	struct dirent *filePointer;
+	DIR *parentDirectory;
+	parentDirectory = opendir ("./hBondNetwork_logs/");
+
+	int nFiles = 0;
+
+	while ((filePointer = readdir (parentDirectory)))
+	{
+		if (isFile(filePointer -> d_name) && strstr(filePointer -> d_name, fileTemplate))
+		{
+			printf("%s\n", filePointer -> d_name);
+			correlation = findHBondCorrelation (filePointer -> d_name, nTimeframes, nThreads);
+			calculateSumCorrelation (correlation, &sumCorrelation, nTimeframes);
+			nFiles++;
+		}
+	}
+
+	avgCorrelation = calculateAverageCorrelation (sumCorrelation, nFiles, nTimeframes);
+
+	char *bondCorrelation_Filename;
+	bondCorrelation_Filename = (char *) malloc (100 * sizeof (char));
+	snprintf (bondCorrelation_Filename, 100, "HBond%s.correlation", fileTemplate);
+
+	FILE *bondCorrelation_File;
+	bondCorrelation_File = fopen (bondCorrelation_Filename, "w");
+
+	for (int i = 0; i < nTimeframes; ++i)
+	{
+		fprintf(bondCorrelation_File, "%f\n", log (avgCorrelation[i] / avgCorrelation[0]));
+	}
+
+	fclose (bondCorrelation_File);
+}
+
+void computeHBondCorrelation (FILE *inputDumpFile, int nThreads)
+{
+	// Check the number of timesteps in dump file
+	int nTimeframes = countNTimeframes (inputDumpFile);
+
+	// Calculate correlation between 1st and 2nd layers (0_hBond.log)
+	computeHBondCorrelation2 ("0_hBond.log", nTimeframes, nThreads);
+	// Calculate correlation between 2nd and 3rd layers (1_hBond.log)
+	computeHBondCorrelation2 ("1_hBond.log", nTimeframes, nThreads);
+	// Calculate correlation between 3rd and 4th layers (2_hBond.log)
+	computeHBondCorrelation2 ("2_hBond.log", nTimeframes, nThreads);
 }
 
 void computeHBonding (DATA_ATOMS *dumpAtoms, DATA_BONDS *bonds, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, BOUNDS *peakInfo, int nPeaks, CONFIG *inputVectors, NLINES_CONFIG entries, float peakHBondPosition, int currentDumpstep, int nThreads)
@@ -1604,17 +1727,7 @@ void computeHBonding (DATA_ATOMS *dumpAtoms, DATA_BONDS *bonds, DATAFILE_INFO da
 	// }
 	// printf("Zeroth: %d\nFirst: %d\nSecond: %d\nThird: %d\nFourth: %d\n", nZeroth, nFirst, nSecond, nThird, nFourth);
 
-	// Compute correlation of H-bonds
-
-	// Quantify H-bond network
-	// (i.e) Number of H-bonds between different peaks
-	// Find average and standard deviation of the above quantity
 	analyzeHBondNetwork (dumpAtomsMod, datafile, dumpfile, inputVectors, peakInfo, nPeaks, peakHBondPosition, currentDumpstep, nThreads);
-
-	// Check the H-bond lifetime using the correlation function.
-	// Calculate both C(t) and S(t)
-	// computeHBondLifetime (dumpAtomsMod, datafile, dumpfile, inputVectors, peakInfo, nPeaks, peakHBondPosition, currentDumpstep, nThreads);
-
 }
 
 BOUNDS *getHBondPeakInformation (int *nPeaks)
@@ -1641,6 +1754,7 @@ float getHBondPeakPosition ()
 
 void initializeHBondNetworkLogfile ()
 {
+	system ("rm hBondNetwork_logs/*");
 	FILE *hBondNetwork_logfile;
 	hBondNetwork_logfile = fopen ("hBondNetwork_logs/hBondNetwork.log", "w");
 
@@ -1842,7 +1956,10 @@ int main(int argc, char const *argv[])
 
 	entries.nLines_inputVectors = nLines_inputVectors; entries.nLines_freeVolumeconfig = nLines_freeVolumeconfig; entries.nLines_vwdSize = nLines_vwdSize; entries.nLines_HBondAtoms = nLines_HBondAtoms;
 
-	processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors, freeVolumeconfig, vwdSize, entries, nThreads);
+	// processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors, freeVolumeconfig, vwdSize, entries, nThreads);
+
+	// Checking h-bond lifetime correlation function from the saved logfiles
+	computeHBondCorrelation (inputDumpFile, nThreads);
 
 	return 0;
 }
