@@ -1,11 +1,13 @@
 all:
 	export OMP_DYNAMIC=true
-	gcc -o bondRDF_OOP_entropy bondRDF_OOP_entropy.c -fopenmp -Wall -lm -O3
-	gcc -o computeFreeVolume computeFreeVolume.c -fopenmp -Wall -lm -O3
-	gcc -o computeMSD computeMSD.c -lm -fopenmp -Wall -O3
-	gcc -o bondRDF_ACF bondRDF_ACF.c -lm -fopenmp -Wall -O3
-	./bondRDF_OOP_entropy
-	./computeFreeVolume
-	./computeMSD
-	python bondRDF_AUC.py
-	python outputMSD.py
+	gcc -c aqueousnapss.c -Wall -fstack-protector -g -fopenmp -lm
+	gcc -c fileHandling.c -Wall -fstack-protector -g -fopenmp -lm
+	gcc -c readInputFile.c -Wall -fstack-protector -g -fopenmp -lm
+	gcc -c generalUtilities.c -Wall -fstack-protector -g -fopenmp -lm
+	gcc -c waterOrientation.c -Wall -fstack-protector -g -fopenmp -lm
+	gcc -c hBondCorrelation.c -Wall -fstack-protector -g -fopenmp -lm
+	gcc -c freeVolume.c -Wall -fstack-protector -g -fopenmp -lm
+	gcc -c bondRDF.c -Wall -fstack-protector -g -fopenmp -lm
+	gcc -c meanSquareDisplacement.c -Wall -fstack-protector -g -fopenmp -lm
+	gcc -c main.c -Wall -fstack-protector -g -fopenmp -lm
+	gcc main.o aqueousnapss.o fileHandling.o readInputFile.o generalUtilities.o waterOrientation.o hBondCorrelation.o freeVolume.o bondRDF.o meanSquareDisplacement.o -o main -lm -fopenmp -Wall -g -fstack-protector
