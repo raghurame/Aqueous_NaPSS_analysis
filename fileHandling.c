@@ -99,3 +99,43 @@ char *getInputFileName()
 	}
 	return inputFileName;
 }
+
+char *getInputFileName_direct (const char *inputFileTemplate)
+{
+	int nFiles = 0;
+	char *inputFileName;
+	inputFileName = (char *) malloc (100 * sizeof (char));
+
+	nFiles = displayFiles (inputFileTemplate);
+
+	if (nFiles == 1)
+	{
+		DIR *parentDirectory;
+		parentDirectory = opendir ("./");
+
+		struct dirent *filePointer;
+
+		/* Scan all the files using filePointer */
+		while ((filePointer = readdir (parentDirectory)))
+		{
+			if (isFile(filePointer -> d_name) && strstr(filePointer -> d_name, inputFileTemplate))
+			{
+				strcpy (inputFileName, filePointer -> d_name);
+			}
+		}
+
+		return inputFileName;
+	}
+	else if (nFiles > 1)
+	{
+		printf("\nERROR:\n~~~~~~\n\nMore than one file found with *.%s extension. Args must be passed !\n\nREQUIRED ARGS:\n~~~~~~~~~~~~~~\n\nargv[0] = ./program\nargv[1] = dump filename\nargv[2] = data filename\n\n", inputFileTemplate);
+		exit (1);
+		snprintf (inputFileName, 100, "NULL");
+		return inputFileName;
+	}
+	else if (nFiles == 0)
+	{
+		printf("\nERROR:\n~~~~~~\n\nNo file found with *.%s extension. Args must be passed !\n\nREQUIRED ARGS:\n~~~~~~~~~~~~~~\n\nargv[0] = ./program\nargv[1] = dump filename\nargv[2] = data filename\n\n", inputFileTemplate);
+		exit (1);
+	}
+}

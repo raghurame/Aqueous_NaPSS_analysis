@@ -27,26 +27,29 @@ int main (int argc, char const *argv[])
 	FILE *inputDumpFile, *inputDataFile, *inputConfigFile, *inputFreevolumeConfigFile, *inputVDWConfigFile, *inputHBondConfigFile;
 	char *inputDumpFilename, *inputDataFilename, *inputConfigFilename, *inputFreevolumeConfigFilename, *inputVDWConfigFilename, *inputHBondConfigFilename;
 
-	// printf("%s\n", "Looking for LAMMPS trajectory file...");
-	// inputDumpFilename = getInputFileName ();
-	inputDumpFilename = argv[1];
-	// printf("%s\n", "Looking for LAMMPS data file...");
-	// inputDataFilename = getInputFileName ();
-	inputDataFilename = argv[2];
-	// printf("%s\n", "Looking for input config file (for OOP/bondRDF calculations)...");
-	// inputConfigFilename = getInputFileName ();
+	// inputDumpFilename = getInputFileName_direct (".lammpstrj");
+	// inputDataFilename = getInputFileName_direct (".data");
+
+	if (argc == 3)
+	{
+		inputDumpFilename = argv[1];
+		inputDataFilename = argv[2];
+	}
+	else
+	{
+		printf("\nREQUIRED ARGS:\n~~~~~~~~~~~~~~\n\nargv[0] = ./program\nargv[1] = dump filename\nargv[2] = data filename\n\n");
+		exit (1);
+	}
+
 	inputConfigFilename = (char *) malloc (50 * sizeof (char));
 	snprintf (inputConfigFilename, 50, "bondRDF.config");
-	// printf("%s\n", "Looking for config file for free volume calculations...");
-	// inputFreevolumeConfigFilename = getInputFileName ();
+
 	inputFreevolumeConfigFilename = (char *) malloc (50 * sizeof (char));
 	snprintf (inputFreevolumeConfigFilename, 50, "freeVolume.config");
-	// printf("%s\n", "Looking for config file containing VWD radii...");
-	// inputVDWConfigFilename = getInputFileName ();
+
 	inputVDWConfigFilename = (char *) malloc (50 * sizeof (char));
 	snprintf (inputVDWConfigFilename, 50, "vdwsize.config");
-	// printf("%s\n", "Looking for config file to compute H bonding...");
-	// inputHBondConfigFilename = getInputFileName ();
+
 	inputHBondConfigFilename = (char *) malloc (50 * sizeof (char));
 	snprintf (inputHBondConfigFilename, 50, "hBond.config");
 
@@ -82,10 +85,8 @@ int main (int argc, char const *argv[])
 
 	processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors, freeVolumeconfig, vwdSize, entries, nThreads);
 
-	// Checking h-bond lifetime correlation function from the saved logfiles
 	computeHBondCorrelation (inputDumpFile, nThreads);
 
-	// Computing autocorrelation of bondRDF distances
 	computeACFOfBondRDF (inputDumpFile);
 
 	return 0;
