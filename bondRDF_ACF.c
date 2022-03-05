@@ -208,6 +208,9 @@ void computeACF (LOGFILES_VARIABLES_BONDRDF_ACF fileVars, ALL_DATA_BONDRDF_ACF *
 void computeACFOfBondRDF (FILE *inputDumpFile)
 {
 	ALL_DATA_BONDRDF_ACF *fullData;
+	// fullData is allocated for 10 elements
+	// 10 elements is an arbitrary number
+	// Memory is later reallocated inside openLogFiles () function
 	fullData = (ALL_DATA_BONDRDF_ACF *) malloc (10 * sizeof (ALL_DATA_BONDRDF_ACF));
 
 	LOGFILES_VARIABLES_BONDRDF_ACF fileVars;
