@@ -41,6 +41,23 @@ int main (int argc, char const *argv[])
 		exit (1);
 	}
 
+	int bondRDF_config_status, freeVolume_config_status, vdwsize_config_status, hBond_config_status, msd_config_status, hBond_threshold_status, freeVolumeVars_config_status;
+
+	printf("\nChecking necessary config files...\n\n");
+	bondRDF_config_status = verifyConfigFiles ("bondRDF.config");
+	freeVolume_config_status = verifyConfigFiles ("freeVolume.config");
+	vdwsize_config_status = verifyConfigFiles ("vdwsize.config");
+	hBond_config_status = verifyConfigFiles ("hBond.config");
+	msd_config_status = verifyConfigFiles ("msd.config");
+	hBond_threshold_status = verifyConfigFiles ("hBond.threshold");
+	freeVolumeVars_config_status = verifyConfigFiles ("freeVolumeVars.config");
+
+	if ((bondRDF_config_status + freeVolume_config_status + vdwsize_config_status + hBond_config_status + msd_config_status + hBond_threshold_status + freeVolumeVars_config_status) > 0)
+	{
+		printf("\nVital files missing. Program will exit now !\n\n");
+		exit (1);
+	}
+
 	inputConfigFilename = (char *) malloc (50 * sizeof (char));
 	snprintf (inputConfigFilename, 50, "bondRDF.config");
 

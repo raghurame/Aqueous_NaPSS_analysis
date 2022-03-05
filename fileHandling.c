@@ -139,3 +139,16 @@ char *getInputFileName_direct (const char *inputFileTemplate)
 		exit (1);
 	}
 }
+
+int verifyConfigFiles (const char *configFilename)
+{
+	if (isFileExists (configFilename) == 0)
+	{
+		printf("FATAL ERROR: Cannot find %s \n", configFilename);
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
+}

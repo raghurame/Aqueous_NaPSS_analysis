@@ -8,6 +8,5 @@ float findConnectedAtom_periodicTranslation (float coord1, int image1, float coo
 void setDistributionZero (DISTRIBUTION **rawArray, int arraySize);
 int getIndex1d (int i, int j, int width);
 long long int getIndex1d_from3d (int x, int xWidth, int y, int yWidth, int z, int zWidth);
-int countNTimeframes (FILE *inputDumpFile);
 
 #endif

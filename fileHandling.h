@@ -6,5 +6,6 @@ int isFileExists (char *inputFilename);
 int displayFiles(const char *fileExtension);
 char *getInputFileName();
 char *getInputFileName_direct (const char *inputFileTemplate);
+int verifyConfigFiles (const char *configFilename);
 
 #endif
