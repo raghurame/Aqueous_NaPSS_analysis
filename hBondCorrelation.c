@@ -355,16 +355,16 @@ void computeHBonding (DATA_ATOMS *dumpAtoms, DATA_BONDS *bonds, DATAFILE_INFO da
 	analyzeHBondNetwork (dumpAtomsMod, datafile, dumpfile, inputVectors, peakInfo, nPeaks, peakHBondPosition, currentDumpstep, nThreads);
 }
 
-BOUNDS *getHBondPeakInformation (int *nPeaks)
+BOUNDS *getHBondPeakInformation (FILE *msdConfig_file, int nPeaks)
 {
-	printf("How many peaks to assign?: "); scanf ("%d", &(*nPeaks)); printf("\n");
-	BOUNDS *peakInfo;
-	peakInfo = (BOUNDS *) malloc ((*nPeaks) * sizeof (BOUNDS));
+	char lineString[1000];
+	rewind (msdConfig_file);
+	fgets (lineString, 1000, msdConfig_file);
 
-	for (int i = 0; i < (*nPeaks); ++i)
+	for (int i = 0; i < nPeaks; ++i)
 	{
-		printf("Enter the lower bounds for peak %d: ", i + 1); scanf ("%f", &peakInfo[i].lo); printf("\n");
-		printf("Enter the upper bounds for peak %d: ", i + 1); scanf ("%f", &peakInfo[i].hi); printf("\n");
+		fgets (lineString, 1000, msdConfig_file);
+		sscanf (lineString, "%f %f\n", &peakInfo[i].lo, &peakInfo[i].hi);
 	}
 
 	return peakInfo;
@@ -372,8 +372,15 @@ BOUNDS *getHBondPeakInformation (int *nPeaks)
 
 float getHBondPeakPosition ()
 {
+	FILE *hBondThreshold_file;
+	hBondThreshold_file = fopen ("hBond.threshold", "r");
+
+	char lineString[1000];
 	float thresholdHBondDistance;
-	printf("Enter the threshold distance to consider for H-bonding: "); scanf ("%f", &thresholdHBondDistance);
+
+	fgets (lineString, 1000, hBondThreshold_file);
+	sscanf (lineString, "%f\n", &thresholdHBondDistance);
+	
 	return thresholdHBondDistance;
 }
 

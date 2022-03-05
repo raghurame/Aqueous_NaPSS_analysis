@@ -83,7 +83,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	BOUNDS *peakInfo; int nPeaks; float peakHBondPosition;
 
 	// MSD variables
-	MSD_VARS *msdVars; int nPeaks_msd;
+	MSD_VARS *msdVars; int nPeaks;
 
 	// Reading and processing dump information
 	while (fgets (lineString, 1000, inputDumpFile) != NULL)
@@ -99,23 +99,24 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 
 			freeVolumeVars = getFreeVolumeVars (dumpfile);
 
-			// Gathering peak information for analysing H-bonds
-			peakInfo = getHBondPeakInformation (&nPeaks);
-			peakHBondPosition = getHBondPeakPosition ();
-			initializeHBondNetworkLogfile ();
-			printf("HBond network file initialized successfully...\n");
-			fflush (stdout);
-
+			// Getting necessary information for mean square displacement calculations
 			FILE *msdConfig_file;
 			msdConfig_file = fopen ("msd.config", "r");
 			char lineString2[1000];
 
 			fgets (lineString2, 1000, msdConfig_file);
-			sscanf (lineString2, "%d", nPeaks_msd);
+			sscanf (lineString2, "%d", nPeaks);
+
+			// Gathering peak information for analysing H-bonds
+			peakInfo = getHBondPeakInformation (msdConfig_file, nPeaks);
+			peakHBondPosition = getHBondPeakPosition ();
+			initializeHBondNetworkLogfile ();
+			printf("HBond network file initialized successfully...\n");
+			fflush (stdout);
 
 			fclose (msdConfig_file);
 
-			computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks_msd, inputVectors);
+			computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks, inputVectors);
 		}
 
 		// Main processing loop
