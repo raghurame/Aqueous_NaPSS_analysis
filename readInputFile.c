@@ -335,3 +335,27 @@ DUMPFILE_INFO getDumpFileInfo (FILE *inputDumpFile)
 	rewind (inputDumpFile);
 	return dumpfile;
 }
+
+int countNTimeframes (FILE *inputDumpFile)
+{
+	rewind (inputDumpFile);
+
+	int nLines = 0, nTimeframes;
+	char lineString[1000];
+
+	DUMPFILE_INFO dumpfile;
+	dumpfile = getDumpFileInfo (inputDumpFile);
+
+	while ((fgets (lineString, 1000, inputDumpFile) != NULL))
+	{
+		nLines++;
+	}
+
+	rewind (inputDumpFile);
+
+	printf("Number of lines in the input dumpfile: %d\n", nLines);
+	nTimeframes = nLines / (dumpfile.nAtoms + 9);
+	printf("Number of timeframes: %d\n", nTimeframes);
+
+	return nTimeframes;
+}

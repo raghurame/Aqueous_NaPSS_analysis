@@ -85,6 +85,9 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	// MSD variables
 	MSD_VARS *msdVars;
 
+	// Checking faults in input dump file
+	int currentAtomID = 0, previousAtomID = 0, fault = 0;
+
 	// Reading and processing dump information
 	while (fgets (lineString, 1000, inputDumpFile) != NULL)
 	{
@@ -123,7 +126,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 		}
 
 		// Main processing loop
-		if ((currentDumpstep > 2) && (nElements > 0) && (currentLine == 2))
+		if ((currentDumpstep > 2) && (nElements > 0) && (currentLine == 2) && (fault == 0))
 		{
 			sscanf (lineString, "%d", &currentTimestep);
 			printf("Scanning timestep: %d...               \n", currentTimestep);
@@ -157,9 +160,12 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			currentDumpstep++;
 			currentLine = 1;
 			isNElementsSet = 0;
+			currentAtomID = 0;
+			previousAtomID = 0;
+			fault = 0;
 		}
 
-		if (currentLine > 9 && currentLine < (9 + dumpfile.nAtoms))
+		if ((currentLine > 9) && (currentLine < (9 + dumpfile.nAtoms)))
 		{	
 			sscanf (lineString, "%d %d %f %f %f %*f %*f %*f %d %d %d\n",
 				&dumpAtoms[currentLine - 10].id,
@@ -170,6 +176,15 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 				&dumpAtoms[currentLine - 10].ix,
 				&dumpAtoms[currentLine - 10].iy,
 				&dumpAtoms[currentLine - 10].iz);
+
+			currentAtomID = dumpAtoms[currentLine - 10].id;
+
+			if (currentAtomID != (previousAtomID + 1))
+			{
+				fault++;
+			}
+
+			previousAtomID = currentAtomID;
 		}
 
 		currentLine++;

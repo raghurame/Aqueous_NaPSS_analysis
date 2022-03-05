@@ -5,5 +5,6 @@ DATAFILE_INFO readData (FILE *input, DATA_ATOMS **atoms, DATA_BONDS **bonds, DAT
 CONFIG *readConfig (FILE *inputConfigFile, int *nLines_return);
 CONFIG *readVWDRadius (FILE *inputVDWConfigFile, int *nLines_return);
 DUMPFILE_INFO getDumpFileInfo (FILE *inputDumpFile);
+int countNTimeframes (FILE *inputDumpFile);
 
 #endif
