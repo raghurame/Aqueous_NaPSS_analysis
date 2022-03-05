@@ -25,6 +25,18 @@ int isFile(const char *name)
 	return -1;
 }
 
+int isFileExists (char *inputFilename)
+{
+	FILE *checking;
+
+	if (checking = fopen (inputFilename, "r"))
+	{
+		fclose (checking);
+		return 1;
+	}
+	return 0;
+}
+
 int displayFiles(const char *fileExtension)
 {
 	int nFiles = 0;

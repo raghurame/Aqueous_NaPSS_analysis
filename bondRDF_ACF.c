@@ -8,6 +8,10 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <omp.h>
+#include "structDefinitions.h"
+#include "fileHandling.h"
+#include "generalUtilities.h"
+#include "bondRDF_ACF.h"
 
 /*
  * Arguments to pass:
@@ -17,18 +21,6 @@
  * argv[2] = threshold distance to consider from the first timeframe
  *
  */
-
-int isFileExists (char *inputFilename)
-{
-	FILE *checking;
-
-	if (checking = fopen (inputFilename, "r"))
-	{
-		fclose (checking);
-		return 1;
-	}
-	return 0;
-}
 
 long long int findNlines (char *logFilename)
 {
@@ -46,20 +38,7 @@ long long int findNlines (char *logFilename)
 	return nLinesTotal;
 }
 
-long long int getIndex1d (int i, int j, int width_j)
-{
-	// width_j is the max value of 'j'
-	int index1d = 0;
-	index1d = (width_j * i) + j;
-	return index1d;
-}
-
-typedef struct allData
-{
-	float x1, y1, z1, x2, y2, z2, x3, y3, z3, distance;
-} ALL_DATA;
-
-void storeLogfileInfo (char *logFilename, ALL_DATA **fullData, int nLines, int currentTrajCount)
+void storeLogfileInfo (char *logFilename, ALL_DATA_BONDRDF_ACF **fullData, int nLines, int currentTrajCount)
 {
 	FILE *logFile;
 	logFile = fopen (logFilename, "r");
@@ -79,18 +58,12 @@ void storeLogfileInfo (char *logFilename, ALL_DATA **fullData, int nLines, int c
 	}
 }
 
-typedef struct openLogFiles_struct
-{
-	int currentTrajCount, nLines;
-	long long int nLinesTotal;
-} LOGFILES_VARIABLES;
-
-LOGFILES_VARIABLES openLogFiles (FILE *mainDumpfile, float thresholdDistance, ALL_DATA **fullData)
+LOGFILES_VARIABLES_BONDRDF_ACF openLogFiles (FILE *mainDumpfile, ALL_DATA_BONDRDF_ACF **fullData)
 {
 	char lineString[1000], *logFilename;
 	int isTimeline = 0, currentTimeframe;
 
-	LOGFILES_VARIABLES fileVars;
+	LOGFILES_VARIABLES_BONDRDF_ACF fileVars;
 	fileVars.currentTrajCount = 0;
 	fileVars.nLinesTotal = 0;
 
@@ -107,7 +80,7 @@ LOGFILES_VARIABLES openLogFiles (FILE *mainDumpfile, float thresholdDistance, AL
 			{
 				fileVars.nLines = findNlines (logFilename);
 				fileVars.nLinesTotal += fileVars.nLines;
-				(*fullData) = (ALL_DATA *) realloc ((*fullData), fileVars.nLinesTotal * sizeof (ALL_DATA));
+				(*fullData) = (ALL_DATA_BONDRDF_ACF *) realloc ((*fullData), fileVars.nLinesTotal * sizeof (ALL_DATA_BONDRDF_ACF));
 				storeLogfileInfo (logFilename, &(*fullData), fileVars.nLines, fileVars.currentTrajCount);
 				printf("reading file: %s     \r", logFilename);
 				fflush (stdout);
@@ -152,7 +125,7 @@ void printACF (int i, float *originalDistance, float *acf, int currentTrajCount,
 	}
 }
 
-void computeACF (LOGFILES_VARIABLES fileVars, ALL_DATA *fullData)
+void computeACF (LOGFILES_VARIABLES_BONDRDF_ACF fileVars, ALL_DATA_BONDRDF_ACF *fullData)
 {
 	system ("mkdir bondRDF_processed");
 
@@ -232,27 +205,38 @@ void computeACF (LOGFILES_VARIABLES fileVars, ALL_DATA *fullData)
 	}
 }
 
-int main(int argc, char const *argv[])
+void computeACFOfBondRDF (FILE *inputDumpFile)
 {
-	long number_of_processors = sysconf(_SC_NPROCESSORS_ONLN);
-	int nThreads = (int) number_of_processors - 1;
+	ALL_DATA_BONDRDF_ACF *fullData;
+	fullData = (ALL_DATA_BONDRDF_ACF *) malloc (10 * sizeof (ALL_DATA_BONDRDF_ACF));
 
-	if (argc < 3)
-	{
-		printf("Required args:\n~~~~~~~~~~~~~~~\n\nargv[0] = ./program\nargv[1] = main dump file\nargv[2] = threshold distance to consider\n\n");
-		exit (1);
-	}
-	FILE *mainDumpfile;
-	mainDumpfile = fopen (argv[1], "r");
+	LOGFILES_VARIABLES_BONDRDF_ACF fileVars;
 
-	float thresholdDistance = atof (argv[2]);
-	ALL_DATA *fullData;
-	fullData = (ALL_DATA *) malloc (10 * sizeof (ALL_DATA));
-
-	LOGFILES_VARIABLES fileVars;
-
-	fileVars = openLogFiles (mainDumpfile, thresholdDistance, &fullData);
+	fileVars = openLogFiles (inputDumpFile, &fullData);
 	computeACF (fileVars, fullData);
-
-	return 0;
 }
+
+// int main(int argc, char const *argv[])
+// {
+// 	long number_of_processors = sysconf(_SC_NPROCESSORS_ONLN);
+// 	int nThreads = (int) number_of_processors - 1;
+
+// 	if (argc < 3)
+// 	{
+// 		printf("Required args:\n~~~~~~~~~~~~~~~\n\nargv[0] = ./program\nargv[1] = main dump file\nargv[2] = threshold distance to consider\n\n");
+// 		exit (1);
+// 	}
+// 	FILE *mainDumpfile;
+// 	mainDumpfile = fopen (argv[1], "r");
+
+// 	float thresholdDistance = atof (argv[2]);
+// 	ALL_DATA *fullData;
+// 	fullData = (ALL_DATA *) malloc (10 * sizeof (ALL_DATA));
+
+// 	LOGFILES_VARIABLES fileVars;
+
+// 	fileVars = openLogFiles (mainDumpfile, thresholdDistance, &fullData);
+// 	computeACF (fileVars, fullData);
+
+// 	return 0;
+// }

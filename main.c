@@ -13,6 +13,7 @@
 #include "fileHandling.h"
 #include "readInputFile.h"
 #include "hBondCorrelation.h"
+#include "bondRDF_ACF.h"
 
 int main (int argc, char const *argv[])
 {
@@ -79,10 +80,13 @@ int main (int argc, char const *argv[])
 
 	entries.nLines_inputVectors = nLines_inputVectors; entries.nLines_freeVolumeconfig = nLines_freeVolumeconfig; entries.nLines_vwdSize = nLines_vwdSize; entries.nLines_HBondAtoms = nLines_HBondAtoms;
 
-	processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors, freeVolumeconfig, vwdSize, entries, nThreads);
+	// processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors, freeVolumeconfig, vwdSize, entries, nThreads);
 
 	// Checking h-bond lifetime correlation function from the saved logfiles
-	computeHBondCorrelation (inputDumpFile, nThreads);
+	// computeHBondCorrelation (inputDumpFile, nThreads);
+
+	// Computing autocorrelation of bondRDF distances
+	computeACFOfBondRDF (inputDumpFile);
 
 	return 0;
 }

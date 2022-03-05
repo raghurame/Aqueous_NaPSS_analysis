@@ -9,5 +9,6 @@ all:
 	gcc -c freeVolume.c -Wall -fstack-protector -g -fopenmp -lm
 	gcc -c bondRDF.c -Wall -fstack-protector -g -fopenmp -lm
 	gcc -c meanSquareDisplacement.c -Wall -fstack-protector -g -fopenmp -lm
+	gcc -c bondRDF_ACF.c -Wall -fstack-protector -g -fopenmp -lm
 	gcc -c main.c -Wall -fstack-protector -g -fopenmp -lm
-	gcc main.o aqueousnapss.o fileHandling.o readInputFile.o generalUtilities.o waterOrientation.o hBondCorrelation.o freeVolume.o bondRDF.o meanSquareDisplacement.o -o main -lm -fopenmp -Wall -g -fstack-protector
+	gcc main.o aqueousnapss.o bondRDF_ACF.o fileHandling.o readInputFile.o generalUtilities.o waterOrientation.o hBondCorrelation.o freeVolume.o bondRDF.o meanSquareDisplacement.o -o main -lm -fopenmp -Wall -g -fstack-protector

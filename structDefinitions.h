@@ -109,4 +109,15 @@ typedef struct computeMSDvars
 	float lowerBound, upperBound;
 } MSD_VARS;
 
+typedef struct allData_bondRDF_ACF
+{
+	float x1, y1, z1, x2, y2, z2, x3, y3, z3, distance;
+} ALL_DATA_BONDRDF_ACF;
+
+typedef struct openLogFiles_bondRDF_ACF
+{
+	int currentTrajCount, nLines;
+	long long int nLinesTotal;
+} LOGFILES_VARIABLES_BONDRDF_ACF;
+
 #endif
