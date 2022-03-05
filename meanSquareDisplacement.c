@@ -38,10 +38,14 @@ void *computeMSD (DATAFILE_INFO datafile, DATA_ATOMS *dumpAtoms, DATA_BONDS *bon
 		// 	printf("Upper bound for peak %d: ", i + 1); scanf ("%f", &(*msdVars)[i].upperBound); printf("\n");
 		// }
 
-		FILE *msdConfig_file;
-		msdConfig_file = fopen ("msd.config", "r");
+		printf("Number of peaks: %d\n", nPeaks_msd);
+		fflush (stdout);
 
 		char lineString[1000];
+
+		FILE *msdConfig_file;
+		msdConfig_file = fopen ("msd.config", "r");
+		fgets (lineString, 1000, msdConfig_file); // Skipping the first line, which contains the number of lines in the config file
 
 		for (int i = 0; i < nPeaks_msd; ++i)
 		{
@@ -49,6 +53,7 @@ void *computeMSD (DATAFILE_INFO datafile, DATA_ATOMS *dumpAtoms, DATA_BONDS *bon
 			sscanf (lineString, "%f %f\n", &(*msdVars)[i].lowerBound, &(*msdVars)[i].upperBound);
 		}
 		printf("reading peak information from msd.config file...\n");
+		fflush (stdout);
 
 		for (int i = 0; i < dumpfile.nAtoms; ++i)
 		{

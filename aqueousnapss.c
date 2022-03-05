@@ -83,7 +83,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	BOUNDS *peakInfo; int nPeaks; float peakHBondPosition;
 
 	// MSD variables
-	MSD_VARS *msdVars; int nPeaks;
+	MSD_VARS *msdVars;
 
 	// Reading and processing dump information
 	while (fgets (lineString, 1000, inputDumpFile) != NULL)
@@ -102,10 +102,12 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			// Getting necessary information for mean square displacement calculations
 			FILE *msdConfig_file;
 			msdConfig_file = fopen ("msd.config", "r");
+			printf("Opened msd.config file\n");
+			fflush (stdout);
 			char lineString2[1000];
 
 			fgets (lineString2, 1000, msdConfig_file);
-			sscanf (lineString2, "%d", nPeaks);
+			sscanf (lineString2, "%d", &nPeaks);
 
 			// Gathering peak information for analysing H-bonds
 			peakInfo = getHBondPeakInformation (msdConfig_file, nPeaks);
@@ -116,6 +118,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 
 			fclose (msdConfig_file);
 
+			msdVars = (MSD_VARS *) malloc (nPeaks * sizeof (MSD_VARS));
 			computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks, inputVectors);
 		}
 
@@ -140,7 +143,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, currentDumpstep, nThreads);
 
 			// Calculating mean square displacement of water molecules from various layers
-			computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks_msd, inputVectors);
+			computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks, inputVectors);
 
 			isTimestep = 0;
 		}

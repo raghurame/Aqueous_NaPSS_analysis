@@ -357,15 +357,22 @@ void computeHBonding (DATA_ATOMS *dumpAtoms, DATA_BONDS *bonds, DATAFILE_INFO da
 
 BOUNDS *getHBondPeakInformation (FILE *msdConfig_file, int nPeaks)
 {
+	printf("read h bond information from msd.config file...\n");
+	fflush (stdout);
 	char lineString[1000];
 	rewind (msdConfig_file);
 	fgets (lineString, 1000, msdConfig_file);
+
+	BOUNDS *peakInfo;
+	peakInfo = (BOUNDS *) malloc (nPeaks * sizeof (BOUNDS));
+
 
 	for (int i = 0; i < nPeaks; ++i)
 	{
 		fgets (lineString, 1000, msdConfig_file);
 		sscanf (lineString, "%f %f\n", &peakInfo[i].lo, &peakInfo[i].hi);
 	}
+
 
 	return peakInfo;
 }
@@ -380,7 +387,7 @@ float getHBondPeakPosition ()
 
 	fgets (lineString, 1000, hBondThreshold_file);
 	sscanf (lineString, "%f\n", &thresholdHBondDistance);
-	
+
 	return thresholdHBondDistance;
 }
 
@@ -392,6 +399,9 @@ void initializeHBondNetworkLogfile ()
 
 	// Writing the first line
 	fprintf(hBondNetwork_logfile, "N firstToSecond, N secondToThird, N thirdToFourth, N Mols Zeroth, N Mols First, N Mols Second, N Mols Third, N Mols Fourth\n");
+
+	printf("Created hBond network log file\n");
+	fflush (stdout);
 
 	fclose (hBondNetwork_logfile);
 }

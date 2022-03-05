@@ -57,6 +57,9 @@ FREEVOLUME_VARS getFreeVolumeVars (DUMPFILE_INFO dumpfile)
 	// printf("Enter the bin size (number of bins will be calculated based on max. distance and bin size):\t"); scanf ("%f", &freeVolumeVars.binSize_dist);
 	freeVolumeVars.nBins_dist = (int) ((freeVolumeVars.binEnd_dist - freeVolumeVars.binStart_dist) / freeVolumeVars.binSize_dist) + 1;
 
+	printf("Successfully read free volume variables from config file...\n");
+	fflush (stdout);
+
 	return freeVolumeVars;
 }
 

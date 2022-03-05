@@ -9,7 +9,7 @@ float *calculateAverageCorrelation (float *sumCorrelation, int nFiles, int nTime
 void computeHBondCorrelation2 (const char *fileTemplate, int nTimeframes, int nThreads);
 void computeHBondCorrelation (FILE *inputDumpFile, int nThreads);
 void computeHBonding (DATA_ATOMS *dumpAtoms, DATA_BONDS *bonds, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, BOUNDS *peakInfo, int nPeaks, CONFIG *inputVectors, NLINES_CONFIG entries, float peakHBondPosition, int currentDumpstep, int nThreads);
-BOUNDS *getHBondPeakInformation (int *nPeaks);
+BOUNDS *getHBondPeakInformation (FILE *msdConfig_file, int nPeaks);
 float getHBondPeakPosition ();
 void initializeHBondNetworkLogfile ();
 
