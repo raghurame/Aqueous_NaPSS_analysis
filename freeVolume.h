@@ -8,6 +8,6 @@ void initializeFreeVolumeDistribution (FREEVOLUME_DISTRIBUTION **freeVolumeDist,
 void initializeNBins (FREEVOLUME_VARS *freeVolumeVars);
 void resetFreeVolumeDistCounts (FREEVOLUME_DISTRIBUTION **freeVolumeDist, FREEVOLUME_VARS freeVolumeVars);
 void printFreeVolumeDistribution (FREEVOLUME_DISTRIBUTION *freeVolumeDist, int atomType, float probeSize, int nBins);
-void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dumpfile, CONFIG *freeVolumeconfig, CONFIG *vwdSize, NLINES_CONFIG entries, int nThreads);
+void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dumpfile, CONFIG *freeVolumeconfig, CONFIG *vwdSize, NLINES_CONFIG entries, int currentDumpstep, int nThreads);
 
 #endif

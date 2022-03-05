@@ -252,7 +252,7 @@ void printFreeVolumeDistribution (FREEVOLUME_DISTRIBUTION *freeVolumeDist, int a
 	fclose (freeVolumeLogfile);
 }
 
-void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dumpfile, CONFIG *freeVolumeconfig, CONFIG *vwdSize, NLINES_CONFIG entries, int nThreads)
+void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dumpfile, CONFIG *freeVolumeconfig, CONFIG *vwdSize, NLINES_CONFIG entries, int currentDumpstep, int nThreads)
 {
 	DATA_ATOMS probePosition;
 	freeVolumeVars.currentProbeSize = freeVolumeVars.minProbeSize;

@@ -136,8 +136,11 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
 			computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
 
-			// Calculating free volume distribution
-			computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, nThreads);
+			// Calculating free volume distribution once every 4 dump timeframes
+			if ((currentDumpstep % 4) == 0)
+			{
+				computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, currentDumpstep, nThreads);
+			}
 
 			// Computing H bond lifetime and frequency
 			computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, currentDumpstep, nThreads);
