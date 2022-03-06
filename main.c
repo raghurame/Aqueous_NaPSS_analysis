@@ -23,6 +23,7 @@ int main (int argc, char const *argv[])
 
 	long number_of_processors = sysconf(_SC_NPROCESSORS_ONLN);
 	int nThreads = (int) number_of_processors - 1;
+	nThreads = 1; // Comment this line if enough processors are available 
 
 	FILE *inputDumpFile, *inputDataFile, *inputConfigFile, *inputFreevolumeConfigFile, *inputVDWConfigFile, *inputHBondConfigFile;
 	char *inputDumpFilename, *inputDataFilename, *inputConfigFilename, *inputFreevolumeConfigFilename, *inputVDWConfigFilename, *inputHBondConfigFilename;

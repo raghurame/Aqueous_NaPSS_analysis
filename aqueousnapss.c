@@ -88,6 +88,8 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	// Checking faults in input dump file
 	int currentAtomID = 0, previousAtomID = 0, fault = 0;
 
+	int nFreeVolumeCounts = 0;
+
 	// Reading and processing dump information
 	while (fgets (lineString, 1000, inputDumpFile) != NULL)
 	{
@@ -140,14 +142,17 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
 
 			// Calculating free volume distribution once every 4 dump timeframes
-			if ((currentDumpstep % 4) == 0)
+			if ((currentDumpstep % 100) == 0 && (nFreeVolumeCounts <= 5))
+			{
 				computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, currentDumpstep, nThreads);
+				nFreeVolumeCounts++;
+			}
 
 			// Computing H bond lifetime and frequency
-			computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, currentDumpstep, nThreads);
+			// computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, currentDumpstep, nThreads);
 
 			// Calculating mean square displacement of water molecules from various layers
-			computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks, inputVectors);
+			// computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks, inputVectors);
 
 			isTimestep = 0;
 		}

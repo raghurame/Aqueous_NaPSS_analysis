@@ -13,10 +13,10 @@
 #include "generalUtilities.h"
 #include "fileHandling.h"
 
-DATA_ATOMS *assignPeaks (DATA_ATOMS *dumpAtoms, DATA_BONDS *bonds, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, BOUNDS *peakInfo, int nPeaks, CONFIG *inputVectors, int nThreads)
+DATA_ATOMS *assignPeaks (DATA_ATOMS *dumpAtoms, DATA_ATOMS *dumpAtomsMod, DATA_BONDS *bonds, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, BOUNDS *peakInfo, int nPeaks, CONFIG *inputVectors, int nThreads)
 {
-	DATA_ATOMS *dumpAtomsMod;
-	dumpAtomsMod = (DATA_ATOMS *) malloc (datafile.nAtoms * sizeof (DATA_ATOMS));
+	// DATA_ATOMS *dumpAtomsMod;
+	// dumpAtomsMod = (DATA_ATOMS *) malloc (datafile.nAtoms * sizeof (DATA_ATOMS));
 
 	float xDist = (dumpfile.xhi - dumpfile.xlo), yDist = (dumpfile.yhi - dumpfile.ylo), zDist = (dumpfile.zhi - dumpfile.zlo);
 	float xDistHalf = (xDist / 2), yDistHalf = (yDist / 2), zDistHalf = (zDist / 2);
@@ -308,7 +308,9 @@ void computeHBondCorrelation (FILE *inputDumpFile, int nThreads)
 void computeHBonding (DATA_ATOMS *dumpAtoms, DATA_BONDS *bonds, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, BOUNDS *peakInfo, int nPeaks, CONFIG *inputVectors, NLINES_CONFIG entries, float peakHBondPosition, int currentDumpstep, int nThreads)
 {
 	DATA_ATOMS *dumpAtomsMod;
-	dumpAtomsMod = assignPeaks (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, nThreads);
+	dumpAtomsMod = (DATA_ATOMS *) malloc (datafile.nAtoms * sizeof (DATA_ATOMS));
+
+	dumpAtomsMod = assignPeaks (dumpAtoms, dumpAtomsMod, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, nThreads);
 
 	analyzeHBondNetwork (dumpAtomsMod, datafile, dumpfile, inputVectors, peakInfo, nPeaks, peakHBondPosition, currentDumpstep, nThreads);
 
