@@ -12,7 +12,7 @@
 #include "waterOrientation.h"
 #include "generalUtilities.h"
 
-ORDERPARAMETER *computeOrderParameter (DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dumpfile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, int currentTimestep, unsigned int nElements)
+ORDERPARAMETER *computeOrderParameter (ORDERPARAMETER *allData_array, DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dumpfile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, int currentTimestep, unsigned int nElements)
 {
 	FILE *allData;
 	char *allData_string;
@@ -22,8 +22,8 @@ ORDERPARAMETER *computeOrderParameter (DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dump
 
 	fprintf(allData, "atom1, atom2, atom3, atom4, distance, angle (rad), angle (deg), OOP\n");
 
-	ORDERPARAMETER *allData_array;
-	allData_array = (ORDERPARAMETER *) malloc (nElements * sizeof (ORDERPARAMETER));
+	// ORDERPARAMETER *allData_array;
+	// allData_array = (ORDERPARAMETER *) malloc (nElements * sizeof (ORDERPARAMETER));
 
 	unsigned int currentElement = 0;
 
@@ -166,7 +166,9 @@ ORDERPARAMETER *computeOrderParameter (DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dump
 		}
 	}
 
-	// fclose (allData);
+	fclose (allData);
+	free (allData_string);
+
 	return allData_array;
 }
 

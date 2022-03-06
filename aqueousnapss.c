@@ -129,13 +129,13 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 		if ((currentDumpstep > 2) && (nElements > 0) && (currentLine == 2) && (fault == 0))
 		{
 			sscanf (lineString, "%d", &currentTimestep);
-			printf("Scanning timestep: %d...               \n", currentTimestep);
+			printf("Scanning timestep: %d; (%d)...               \n", currentTimestep, currentDumpstep);
 			fflush (stdout); 
 
 			computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter, currentTimestep);
 
 			// Checking bond orientation
-			allData_array = computeOrderParameter (dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
+			allData_array = computeOrderParameter (allData_array, dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
 			computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
 			computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
 
@@ -191,4 +191,12 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	printDistribution_OOP (distribution_OOP, plotVars);
 	printDistribution_degrees (distribution_degrees, plotVars);
 	printBondRDF (bondRDF, RDFcounter, nBins_dist_RDF, binSize_dist_RDF);
+
+	free (distribution_OOP);
+	free (distribution_degrees);
+	free (dumpAtoms);
+	free (initCoords);
+	free (bondRDF);
+	free (allData_array);
+	free (msdVars);
 }

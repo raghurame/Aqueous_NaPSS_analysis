@@ -156,35 +156,10 @@ void analyzeHBondNetwork (DATA_ATOMS *dumpAtomsMod, DATAFILE_INFO datafile, DUMP
 								fclose (connectivityInfo_file);
 							}
 						}
-
 						nHBonds[index]++;
 					}
-
-					// creating logfile containing the currentDumpstep and connectivity information
-					// connectivity information: 1 => connected; 0 => not connected.
-					// it is not necessary to print '0' to the log file
-					// if ((distance < peakHBondPosition))
-					// {
-					// 	if (dumpAtomsMod[i].id > dumpAtomsMod[j].id)
-					// 	{
-					// 		snprintf (connectivityInfo_filename, 200, "hBondNetwork_logs/%d-%d_hBond.log", dumpAtomsMod[j].id, dumpAtomsMod[i].id);
-					// 		FILE *connectivityInfo_file;
-					// 		connectivityInfo_file = fopen (connectivityInfo_filename, "a");
-					// 		fprintf(connectivityInfo_file, "%d\n", currentDumpstep);
-					// 		fclose (connectivityInfo_file);
-					// 	}
-					// 	else
-					// 	{
-					// 		snprintf (connectivityInfo_filename, 200, "hBondNetwork_logs/%d-%d_hBond.log", dumpAtomsMod[i].id, dumpAtomsMod[j].id);
-					// 		FILE *connectivityInfo_file;
-					// 		connectivityInfo_file = fopen (connectivityInfo_filename, "a");
-					// 		fprintf(connectivityInfo_file, "%d\n", currentDumpstep);
-					// 		fclose (connectivityInfo_file);
-					// 	}
-					// }
 				}
 			}
-
 			// Counting the number of molecules in every shell
 			nMolecules[ dumpAtomsMod[i].molType ]++;
 		}
@@ -201,6 +176,9 @@ void analyzeHBondNetwork (DATA_ATOMS *dumpAtomsMod, DATAFILE_INFO datafile, DUMP
 		fprintf(hBondNetwork_logfile, "%d, ", nMolecules[i]);
 
 	fprintf(hBondNetwork_logfile, "%d\n", nMolecules[nPeaks]);
+
+	free (nHBonds); 
+	free (nMolecules);
 
 	fclose (hBondNetwork_logfile);
 }
@@ -332,27 +310,9 @@ void computeHBonding (DATA_ATOMS *dumpAtoms, DATA_BONDS *bonds, DATAFILE_INFO da
 	DATA_ATOMS *dumpAtomsMod;
 	dumpAtomsMod = assignPeaks (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, nThreads);
 
-	// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// // Checking the previous assignment
-	// // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	// int nZeroth = 0, nFirst = 0, nSecond = 0, nThird = 0, nFourth = 0;
-	// for (int i = 0; i < datafile.nAtoms; ++i)
-	// {
-	// 	// printf("%d %d %d\n", dumpAtomsMod[i].id, dumpAtomsMod[i].atomType, dumpAtomsMod[i].molType); usleep (10000);
-	// 	if (dumpAtomsMod[i].molType == 0)
-	// 		nZeroth++;
-	// 	if (dumpAtomsMod[i].molType == 1)
-	// 		nFirst++;
-	// 	if (dumpAtomsMod[i].molType == 2)
-	// 		nSecond++;
-	// 	if (dumpAtomsMod[i].molType == 3)
-	// 		nThird++;
-	// 	if (dumpAtomsMod[i].molType == 4)
-	// 		nFourth++;
-	// }
-	// printf("Zeroth: %d\nFirst: %d\nSecond: %d\nThird: %d\nFourth: %d\n", nZeroth, nFirst, nSecond, nThird, nFourth);
-
 	analyzeHBondNetwork (dumpAtomsMod, datafile, dumpfile, inputVectors, peakInfo, nPeaks, peakHBondPosition, currentDumpstep, nThreads);
+
+	free (dumpAtomsMod);
 }
 
 BOUNDS *getHBondPeakInformation (FILE *msdConfig_file, int nPeaks)
@@ -366,13 +326,11 @@ BOUNDS *getHBondPeakInformation (FILE *msdConfig_file, int nPeaks)
 	BOUNDS *peakInfo;
 	peakInfo = (BOUNDS *) malloc (nPeaks * sizeof (BOUNDS));
 
-
 	for (int i = 0; i < nPeaks; ++i)
 	{
 		fgets (lineString, 1000, msdConfig_file);
 		sscanf (lineString, "%f %f\n", &peakInfo[i].lo, &peakInfo[i].hi);
 	}
-
 
 	return peakInfo;
 }

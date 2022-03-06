@@ -90,6 +90,7 @@ int main (int argc, char const *argv[])
 	dumpfile = getDumpFileInfo (inputDumpFile);
 
 	CONFIG *inputVectors, *freeVolumeconfig, *vwdSize, *HBondAtoms;
+
 	NLINES_CONFIG entries;
 	int nLines_inputVectors, nLines_freeVolumeconfig, nLines_vwdSize, nLines_HBondAtoms;
 
@@ -105,6 +106,22 @@ int main (int argc, char const *argv[])
 	computeHBondCorrelation (inputDumpFile, nThreads);
 
 	computeACFOfBondRDF (inputDumpFile);
+
+	free (inputConfigFilename);
+	free (inputFreevolumeConfigFilename);
+	free (inputVDWConfigFilename);
+	free (inputHBondConfigFilename);
+
+	free (atoms);
+	free (bonds);
+	free (angles);
+	free (dihedrals);
+	free (impropers);
+
+	free (inputVectors);
+	free (freeVolumeconfig);
+	free (vwdSize);
+	free (HBondAtoms);
 
 	return 0;
 }

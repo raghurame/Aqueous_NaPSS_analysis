@@ -44,14 +44,14 @@ FREEVOLUME_VARS getFreeVolumeVars (DUMPFILE_INFO dumpfile)
 	// printf("Enter the del (size) for probe:\t");
 	// scanf ("%f", &freeVolumeVars.delProbeSize);
 
-	// freeVolumeVars.nBins_probeSweep = (int) ((freeVolumeVars.maxProbeSize - freeVolumeVars.minProbeSize) / freeVolumeVars.delProbeSize) + 1;
+	freeVolumeVars.nBins_probeSweep = (int) ((freeVolumeVars.maxProbeSize - freeVolumeVars.minProbeSize) / freeVolumeVars.delProbeSize) + 1;
 
 	// // Variables regarding 3D probe movement
 	// // delDistance can usually be set at 1/4th of probe radius
-	// freeVolumeVars.xLength = (dumpfile.xhi - dumpfile.xlo); freeVolumeVars.yLength = (dumpfile.yhi - dumpfile.ylo); freeVolumeVars.zLength = (dumpfile.zhi - dumpfile.zlo);
+	freeVolumeVars.xLength = (dumpfile.xhi - dumpfile.xlo); freeVolumeVars.yLength = (dumpfile.yhi - dumpfile.ylo); freeVolumeVars.zLength = (dumpfile.zhi - dumpfile.zlo);
 
 	// // Variables for calculating free volume distribution
-	// freeVolumeVars.binStart_dist = 0;
+	freeVolumeVars.binStart_dist = 0;
 	// printf("Free volume distribution will be calculated from the center of respective atoms\n\n");
 	// printf("Enter the max. distance to consider for free volume distribution (float type):\t"); scanf ("%f", &freeVolumeVars.binEnd_dist);
 	// printf("Enter the bin size (number of bins will be calculated based on max. distance and bin size):\t"); scanf ("%f", &freeVolumeVars.binSize_dist);
@@ -63,14 +63,14 @@ FREEVOLUME_VARS getFreeVolumeVars (DUMPFILE_INFO dumpfile)
 	return freeVolumeVars;
 }
 
-int *computeFreeVolume_checkOccupation (int i, DUMPFILE_INFO dumpfile, DATA_ATOMS *dumpAtoms, FREEVOLUME_VARS freeVolumeVars, CONFIG *vwdSize, int nThreads)
+int *computeFreeVolume_checkOccupation (int *isOccupied, int i, DUMPFILE_INFO dumpfile, DATA_ATOMS *dumpAtoms, FREEVOLUME_VARS freeVolumeVars, CONFIG *vwdSize, int nThreads)
 {
 	DATA_ATOMS probePosition;
 	float distance, x1, y1, z1, x2, y2, z2;
-	int *isOccupied;
+	// int *isOccupied;
 	long long int arraySize = (long long int)(freeVolumeVars.nBins_dist_x + 1) * (long long int)(freeVolumeVars.nBins_dist_y + 1) * (long long int)(freeVolumeVars.nBins_dist_z + 1), index1d, progress = 0;
 	float progressPercent;
-	isOccupied = (int *) calloc (arraySize, sizeof (int));
+	// isOccupied = (int *) calloc (arraySize, sizeof (int));
 
 	omp_set_num_threads (nThreads);
 
@@ -198,8 +198,6 @@ void computeFreeVolume_getDistribution (int i, int j, FREEVOLUME_DISTRIBUTION **
 			}
 		}
 	}
-
-	printf("\n");
 }
 
 void initializeFreeVolumeDistribution (FREEVOLUME_DISTRIBUTION **freeVolumeDist, FREEVOLUME_VARS freeVolumeVars)
@@ -276,7 +274,7 @@ void computeFreeVolume (FREEVOLUME_VARS freeVolumeVars, DATA_ATOMS *dumpAtoms, D
 		int *isOccupied;
 		arraySize = (long long int)freeVolumeVars.nBins_dist_x * (long long int)freeVolumeVars.nBins_dist_y * (long long int)freeVolumeVars.nBins_dist_z;
 		isOccupied = (int *) malloc (arraySize * sizeof (int));
-		isOccupied = computeFreeVolume_checkOccupation (i, dumpfile, dumpAtoms, freeVolumeVars, vwdSize, nThreads);
+		isOccupied = computeFreeVolume_checkOccupation (isOccupied, i, dumpfile, dumpAtoms, freeVolumeVars, vwdSize, nThreads);
 
 		// Looping through atom types
 		// Getting radial distribution of free volume from every atom type
