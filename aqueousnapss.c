@@ -88,7 +88,8 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	// Checking faults in input dump file
 	int currentAtomID = 0, previousAtomID = 0, fault = 0;
 
-	int nFreeVolumeCounts = 0;
+	// Limiting the number of timeframes to compute
+	int nFreeVolumeCounts = 0, nBondRDFCounts = 0, nWaterOrientationCounts = 0, nHBondComputeCounts = 0, nMSDComputeCounts = 0;
 
 	// Reading and processing dump information
 	while (fgets (lineString, 1000, inputDumpFile) != NULL)
@@ -134,12 +135,19 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			printf("Scanning timestep: %d; (%d)...               \n", currentTimestep, currentDumpstep);
 			fflush (stdout); 
 
-			computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter, currentTimestep);
+			if (((currentDumpstep % 5) == 0) && (nBondRDFCounts <= 100))
+			{
+				computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter, currentTimestep);
+				nBondRDFCounts++;
+			}
 
-			// Checking bond orientation
-			allData_array = computeOrderParameter (allData_array, dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
-			computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
-			computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
+			if (((currentDumpstep % 5) == 0) && (nWaterOrientationCounts <= 100))
+			{
+				allData_array = computeOrderParameter (allData_array, dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
+				computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
+				computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
+				nWaterOrientationCounts++;
+			}
 
 			// Calculating free volume distribution once every 4 dump timeframes
 			if ((currentDumpstep % 100) == 0 && (nFreeVolumeCounts <= 5))
@@ -148,11 +156,17 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 				nFreeVolumeCounts++;
 			}
 
-			// Computing H bond lifetime and frequency
-			// computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, currentDumpstep, nThreads);
+			if (((currentDumpstep % 5) == 0) && (nHBondComputeCounts <= 100))
+			{
+				// computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, currentDumpstep, nThreads);
+				nHBondComputeCounts++;
+			}
 
-			// Calculating mean square displacement of water molecules from various layers
-			// computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks, inputVectors);
+			if ((currentDumpstep % 5) == 0 && (nMSDComputeCounts <= 100))
+			{
+				// computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks, inputVectors);
+				nMSDComputeCounts++;
+			}
 
 			isTimestep = 0;
 		}
