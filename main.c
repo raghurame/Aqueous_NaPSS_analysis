@@ -28,9 +28,11 @@ int main (int argc, char const *argv[])
 	FILE *inputDumpFile, *inputDataFile, *inputConfigFile, *inputFreevolumeConfigFile, *inputVDWConfigFile, *inputHBondConfigFile;
 	char *inputDumpFilename, *inputDataFilename, *inputConfigFilename, *inputFreevolumeConfigFilename, *inputVDWConfigFilename, *inputHBondConfigFilename;
 
+	// Uncomment the following two lines if only one LAMMPSTRJ and DATA files are available
 	// inputDumpFilename = getInputFileName_direct (".lammpstrj");
 	// inputDataFilename = getInputFileName_direct (".data");
 
+	// If the above two lines are uncommented, then the following if-else condition must be commented
 	if (argc == 3)
 	{
 		inputDumpFilename = argv[1];
@@ -59,24 +61,12 @@ int main (int argc, char const *argv[])
 		exit (1);
 	}
 
-	inputConfigFilename = (char *) malloc (50 * sizeof (char));
-	snprintf (inputConfigFilename, 50, "bondRDF.config");
-
-	inputFreevolumeConfigFilename = (char *) malloc (50 * sizeof (char));
-	snprintf (inputFreevolumeConfigFilename, 50, "freeVolume.config");
-
-	inputVDWConfigFilename = (char *) malloc (50 * sizeof (char));
-	snprintf (inputVDWConfigFilename, 50, "vdwsize.config");
-
-	inputHBondConfigFilename = (char *) malloc (50 * sizeof (char));
-	snprintf (inputHBondConfigFilename, 50, "hBond.config");
-
 	inputDumpFile = fopen (inputDumpFilename, "r");
 	inputDataFile = fopen (inputDataFilename, "r");
-	inputConfigFile = fopen (inputConfigFilename, "r");
-	inputFreevolumeConfigFile = fopen (inputFreevolumeConfigFilename, "r");
-	inputVDWConfigFile = fopen (inputVDWConfigFilename, "r");
-	inputHBondConfigFile = fopen (inputHBondConfigFilename, "r");
+	inputConfigFile = fopen ("bondRDF.config", "r");
+	inputFreevolumeConfigFile = fopen ("freeVolume.config", "r");
+	inputVDWConfigFile = fopen ("vdwsize.config", "r");
+	inputHBondConfigFile = fopen ("hBond.config", "r");
 
 	DATA_ATOMS *atoms;
 	DATA_BONDS *bonds;
@@ -107,11 +97,6 @@ int main (int argc, char const *argv[])
 	computeHBondCorrelation (inputDumpFile, nThreads);
 
 	computeACFOfBondRDF (inputDumpFile);
-
-	free (inputConfigFilename);
-	free (inputFreevolumeConfigFilename);
-	free (inputVDWConfigFilename);
-	free (inputHBondConfigFilename);
 
 	free (atoms);
 	free (bonds);
