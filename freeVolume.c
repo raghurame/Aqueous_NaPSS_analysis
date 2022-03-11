@@ -117,7 +117,7 @@ int *computeFreeVolume_checkOccupation (int *isOccupied, int i, DUMPFILE_INFO du
 						isOccupied = (int *) realloc (isOccupied, sizeof (int) * arraySize);
 					}
 
-					if (distance < (freeVolumeVars.currentProbeSize + vwdSize[dumpAtoms[m].atomType - 1].radius))
+					if (distance < (freeVolumeVars.currentProbeSize + (vwdSize[dumpAtoms[m].atomType - 1].radius / 2)))
 					{
 						isOccupied[index1d] = 1;
 					}

@@ -150,7 +150,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			}
 
 			// Calculating free volume distribution once every 4 dump timeframes
-			if ((currentDumpstep % 100) == 0 && (nFreeVolumeCounts <= 5))
+			if ((currentDumpstep % 50) == 0 && (nFreeVolumeCounts <= 5))
 			{
 				computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, currentDumpstep, nThreads);
 				nFreeVolumeCounts++;
