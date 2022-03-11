@@ -23,6 +23,7 @@ int main (int argc, char const *argv[])
 
 	long number_of_processors = sysconf(_SC_NPROCESSORS_ONLN);
 	int nThreads = (int) number_of_processors - 1;
+	
 	// nThreads = 1; // Comment this line if enough processors are available 
 
 	FILE *inputDumpFile, *inputDataFile, *inputConfigFile, *inputFreevolumeConfigFile, *inputVDWConfigFile, *inputHBondConfigFile;
@@ -33,14 +34,15 @@ int main (int argc, char const *argv[])
 	// inputDataFilename = getInputFileName_direct (".data");
 
 	// If the above two lines are uncommented, then the following if-else condition must be commented
-	if (argc == 3)
+	if (argc == 4)
 	{
 		inputDumpFilename = argv[1];
 		inputDataFilename = argv[2];
+		nThreads = atoi (argv[3]);
 	}
 	else
 	{
-		printf("\nREQUIRED ARGS:\n~~~~~~~~~~~~~~\n\nargv[0] = ./program\nargv[1] = dump filename\nargv[2] = data filename\n\n");
+		printf("\nREQUIRED ARGS:\n~~~~~~~~~~~~~~\n\nargv[0] = ./program\nargv[1] = dump filename\nargv[2] = data filename\nargv[3] = no. of processors\n\n");
 		exit (1);
 	}
 
@@ -94,7 +96,7 @@ int main (int argc, char const *argv[])
 
 	processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors, freeVolumeconfig, vwdSize, entries, nThreads);
 
-	computeHBondCorrelation (inputDumpFile, nThreads);
+	// computeHBondCorrelation (inputDumpFile, nThreads);
 
 	computeACFOfBondRDF (inputDumpFile);
 
