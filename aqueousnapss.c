@@ -144,7 +144,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			if (((currentDumpstep % 5) == 0) && (nWaterOrientationCounts <= 100))
 			{
 				allData_array = computeOrderParameter (allData_array, dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
-				computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
+				// computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
 				computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
 				nWaterOrientationCounts++;
 			}
@@ -156,17 +156,17 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 				nFreeVolumeCounts++;
 			}
 
-			// if (((currentDumpstep % 5) == 0) && (nHBondComputeCounts <= 100))
-			// {
-			// 	// computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, currentDumpstep, nThreads);
-			// 	nHBondComputeCounts++;
-			// }
+			if (((currentDumpstep % 5) == 0) && (nHBondComputeCounts <= 100))
+			{
+				computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, currentDumpstep, nThreads);
+				nHBondComputeCounts++;
+			}
 
-			// if ((currentDumpstep % 5) == 0 && (nMSDComputeCounts <= 100))
-			// {
-			// 	// computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks, inputVectors);
-			// 	nMSDComputeCounts++;
-			// }
+			if (((currentDumpstep % 5) == 0) && (nMSDComputeCounts <= 500))
+			{
+				computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks, inputVectors);
+				nMSDComputeCounts++;
+			}
 
 			isTimestep = 0;
 		}
@@ -198,6 +198,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 
 			if (currentAtomID != (previousAtomID + 1))
 			{
+				printf("Fault found in lammpstrj. This timeframe will be ignored !\n");
 				fault++;
 			}
 
@@ -207,7 +208,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 		currentLine++;
 	}
 
-	printDistribution_OOP (distribution_OOP, plotVars);
+	// printDistribution_OOP (distribution_OOP, plotVars);
 	printDistribution_degrees (distribution_degrees, plotVars);
 	printBondRDF (bondRDF, RDFcounter, nBins_dist_RDF, binSize_dist_RDF);
 

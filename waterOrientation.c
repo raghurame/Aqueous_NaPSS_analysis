@@ -121,11 +121,25 @@ ORDERPARAMETER *computeOrderParameter (ORDERPARAMETER *allData_array, DATA_ATOMS
 				if ((bonds[j].atom1Type == inputVectors[0].atom1 && bonds[j].atom2Type == inputVectors[0].atom2) || (bonds[j].atom1Type == inputVectors[0].atom2 && bonds[j].atom2Type == inputVectors[0].atom1))
 				{
 					// Finding the center of two bonds (x1, y1, z1) and (x2, y2, z2)
-					x1 = (dumpAtoms[bonds[i].atom1 - 1].x + dumpAtoms[bonds[i].atom2 - 1].x) / 2; y1 = (dumpAtoms[bonds[i].atom1 - 1].y + dumpAtoms[bonds[i].atom2 - 1].y) / 2; z1 = (dumpAtoms[bonds[i].atom1 - 1].z + dumpAtoms[bonds[i].atom2 - 1].z) / 2; 
+					// x1 = (dumpAtoms[bonds[i].atom1 - 1].x + dumpAtoms[bonds[i].atom2 - 1].x) / 2; 
+					// y1 = (dumpAtoms[bonds[i].atom1 - 1].y + dumpAtoms[bonds[i].atom2 - 1].y) / 2; 
+					// z1 = (dumpAtoms[bonds[i].atom1 - 1].z + dumpAtoms[bonds[i].atom2 - 1].z) / 2; 
 
-					x2 = (dumpAtoms[bonds[j].atom1 - 1].x + dumpAtoms[bonds[j].atom2 - 1].x) / 2; y2 = (dumpAtoms[bonds[j].atom1 - 1].y + dumpAtoms[bonds[j].atom2 - 1].y) / 2; z2 = (dumpAtoms[bonds[j].atom1 - 1].z + dumpAtoms[bonds[j].atom2 - 1].z) / 2;
+					x1 = findBondCenter (dumpAtoms[bonds[i].atom1 - 1].x, dumpAtoms[bonds[i].atom1 - 1].ix, dumpAtoms[bonds[i].atom2 - 1].x, dumpAtoms[bonds[i].atom2 - 1].ix, dumpfile.xlo, dumpfile.xhi);
+					y1 = findBondCenter (dumpAtoms[bonds[i].atom1 - 1].y, dumpAtoms[bonds[i].atom1 - 1].iy, dumpAtoms[bonds[i].atom2 - 1].y, dumpAtoms[bonds[i].atom2 - 1].iy, dumpfile.ylo, dumpfile.yhi);
+					z1 = findBondCenter (dumpAtoms[bonds[i].atom1 - 1].z, dumpAtoms[bonds[i].atom1 - 1].iz, dumpAtoms[bonds[i].atom2 - 1].z, dumpAtoms[bonds[i].atom2 - 1].iz, dumpfile.zlo, dumpfile.zhi);
 
-					x2 = translatePeriodicDistance (x1, x2, xDistHalf); y2 = translatePeriodicDistance (y1, y2, yDistHalf); z2 = translatePeriodicDistance (z1, z2, zDistHalf);
+					// x2 = (dumpAtoms[bonds[j].atom1 - 1].x + dumpAtoms[bonds[j].atom2 - 1].x) / 2; 
+					// y2 = (dumpAtoms[bonds[j].atom1 - 1].y + dumpAtoms[bonds[j].atom2 - 1].y) / 2; 
+					// z2 = (dumpAtoms[bonds[j].atom1 - 1].z + dumpAtoms[bonds[j].atom2 - 1].z) / 2;
+
+					x2 = findBondCenter (dumpAtoms[bonds[j].atom1 - 1].x, dumpAtoms[bonds[j].atom1 - 1].ix, dumpAtoms[bonds[j].atom2 - 1].x, dumpAtoms[bonds[j].atom2 - 1].ix, dumpfile.xlo, dumpfile.xhi);
+					y2 = findBondCenter (dumpAtoms[bonds[j].atom1 - 1].y, dumpAtoms[bonds[j].atom1 - 1].iy, dumpAtoms[bonds[j].atom2 - 1].y, dumpAtoms[bonds[j].atom2 - 1].iy, dumpfile.ylo, dumpfile.yhi);
+					z2 = findBondCenter (dumpAtoms[bonds[j].atom1 - 1].z, dumpAtoms[bonds[j].atom1 - 1].iz, dumpAtoms[bonds[j].atom2 - 1].z, dumpAtoms[bonds[j].atom2 - 1].iz, dumpfile.zlo, dumpfile.zhi);
+
+					x2 = translatePeriodicDistance (x1, x2, xDistHalf); 
+					y2 = translatePeriodicDistance (y1, y2, yDistHalf); 
+					z2 = translatePeriodicDistance (z1, z2, zDistHalf);
 
 					// Distance between the centers of two bonds
 					distance = sqrt (((x2 - x1) * (x2 - x1)) + ((y2 - y1) * (y2 - y1)) + ((z2 - z1) * (z2  - z1)));
@@ -133,13 +147,16 @@ ORDERPARAMETER *computeOrderParameter (ORDERPARAMETER *allData_array, DATA_ATOMS
 					// Storing the positions of all 4 atoms forming the two bonds of interest
 					x1 = dumpAtoms[bonds[i].atom1 - 1].x; 
 					y1 = dumpAtoms[bonds[i].atom1 - 1].y; 
-					z1 = dumpAtoms[bonds[i].atom1 - 1].z; 
+					z1 = dumpAtoms[bonds[i].atom1 - 1].z;
+
 					x2 = dumpAtoms[bonds[i].atom2 - 1].x; 
 					y2 = dumpAtoms[bonds[i].atom2 - 1].y; 
-					z2 = dumpAtoms[bonds[i].atom2 - 1].z; 
+					z2 = dumpAtoms[bonds[i].atom2 - 1].z;
+
 					x3 = dumpAtoms[bonds[j].atom1 - 1].x; 
 					y3 = dumpAtoms[bonds[j].atom1 - 1].y; 
-					z3 = dumpAtoms[bonds[j].atom1 - 1].z; 
+					z3 = dumpAtoms[bonds[j].atom1 - 1].z;
+
 					x4 = dumpAtoms[bonds[j].atom2 - 1].x; 
 					y4 = dumpAtoms[bonds[j].atom2 - 1].y; 
 					z4 = dumpAtoms[bonds[j].atom2 - 1].z; 

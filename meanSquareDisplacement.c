@@ -15,6 +15,7 @@
 void *computeMSD (DATAFILE_INFO datafile, DATA_ATOMS *dumpAtoms, DATA_BONDS *bonds, DUMPFILE_INFO dumpfile, int currentDumpstep, DATA_ATOMS **initCoords, MSD_VARS **msdVars, int nPeaks_msd, CONFIG *inputVectors)
 {
 	float xDist = (dumpfile.xhi - dumpfile.xlo), yDist = (dumpfile.yhi - dumpfile.ylo), zDist = (dumpfile.zhi - dumpfile.zlo);
+	float xDistHalf = (xDist / 2), yDistHalf = (yDist / 2), zDistHalf = (zDist / 2);
 	float distance;
 	char *outputFilename;
 	outputFilename = (char *) malloc (50 * sizeof (char));
@@ -57,7 +58,16 @@ void *computeMSD (DATAFILE_INFO datafile, DATA_ATOMS *dumpAtoms, DATA_BONDS *bon
 
 		for (int i = 0; i < dumpfile.nAtoms; ++i)
 		{
-			(*initCoords)[i].id  = dumpAtoms[i].id; (*initCoords)[i].molType = dumpAtoms[i].molType; (*initCoords)[i].atomType = dumpAtoms[i].atomType; (*initCoords)[i].charge = dumpAtoms[i].charge; (*initCoords)[i].x  = dumpAtoms[i].x; (*initCoords)[i].y = dumpAtoms[i].y; (*initCoords)[i].z  = dumpAtoms[i].z; (*initCoords)[i].ix  = dumpAtoms[i].ix; (*initCoords)[i].iy  = dumpAtoms[i].iy; (*initCoords)[i].iz  = dumpAtoms[i].iz; 
+			(*initCoords)[i].id  = dumpAtoms[i].id; 
+			(*initCoords)[i].molType = dumpAtoms[i].molType; 
+			(*initCoords)[i].atomType = dumpAtoms[i].atomType; 
+			(*initCoords)[i].charge = dumpAtoms[i].charge; 
+			(*initCoords)[i].x  = dumpAtoms[i].x; 
+			(*initCoords)[i].y = dumpAtoms[i].y; 
+			(*initCoords)[i].z  = dumpAtoms[i].z; 
+			(*initCoords)[i].ix  = dumpAtoms[i].ix; 
+			(*initCoords)[i].iy  = dumpAtoms[i].iy; 
+			(*initCoords)[i].iz  = dumpAtoms[i].iz; 
 		}
 	}
 
@@ -66,13 +76,39 @@ void *computeMSD (DATAFILE_INFO datafile, DATA_ATOMS *dumpAtoms, DATA_BONDS *bon
 	{
 		for (int i = 0; i < datafile.nBonds; ++i)
 		{
-			bonds[i].atom1Type = (int) dumpAtoms[bonds[i].atom1 - 1].atomType; bonds[i].atom2Type = (int) dumpAtoms[bonds[i].atom2 - 1].atomType; bonds[i].x1 = translatePeriodic (dumpAtoms[bonds[i].atom1 - 1].x, dumpAtoms[bonds[i].atom1 - 1].ix, xDist); bonds[i].y1 = translatePeriodic (dumpAtoms[bonds[i].atom1 - 1].y, dumpAtoms[bonds[i].atom1 - 1].iy, yDist); bonds[i].z1 = translatePeriodic (dumpAtoms[bonds[i].atom1 - 1].z, dumpAtoms[bonds[i].atom1 - 1].iz, zDist); bonds[i].x2 = translatePeriodic (dumpAtoms[bonds[i].atom2 - 1].x, dumpAtoms[bonds[i].atom2 - 1].ix, xDist); bonds[i].y2 = translatePeriodic (dumpAtoms[bonds[i].atom2 - 1].y, dumpAtoms[bonds[i].atom2 - 1].iy, yDist); bonds[i].z2 = translatePeriodic (dumpAtoms[bonds[i].atom2 - 1].z, dumpAtoms[bonds[i].atom2 - 1].iz, zDist); bonds[i].xc = (bonds[i].x1 + bonds[i].x2) / 2; bonds[i].yc = (bonds[i].y1 + bonds[i].y2) / 2; bonds[i].zc = (bonds[i].z1 + bonds[i].z2) / 2;
+			bonds[i].atom1Type = (int) dumpAtoms[bonds[i].atom1 - 1].atomType; 
+			bonds[i].atom2Type = (int) dumpAtoms[bonds[i].atom2 - 1].atomType; 
+
+			bonds[i].x1 = translatePeriodic (dumpAtoms[bonds[i].atom1 - 1].x, dumpAtoms[bonds[i].atom1 - 1].ix, xDist);
+			bonds[i].y1 = translatePeriodic (dumpAtoms[bonds[i].atom1 - 1].y, dumpAtoms[bonds[i].atom1 - 1].iy, yDist);
+			bonds[i].z1 = translatePeriodic (dumpAtoms[bonds[i].atom1 - 1].z, dumpAtoms[bonds[i].atom1 - 1].iz, zDist);
+
+			bonds[i].x2 = translatePeriodic (dumpAtoms[bonds[i].atom2 - 1].x, dumpAtoms[bonds[i].atom2 - 1].ix, xDist);
+			bonds[i].y2 = translatePeriodic (dumpAtoms[bonds[i].atom2 - 1].y, dumpAtoms[bonds[i].atom2 - 1].iy, yDist);
+			bonds[i].z2 = translatePeriodic (dumpAtoms[bonds[i].atom2 - 1].z, dumpAtoms[bonds[i].atom2 - 1].iz, zDist);
+
+			bonds[i].xc = (bonds[i].x1 + bonds[i].x2) / 2;
+			bonds[i].yc = (bonds[i].y1 + bonds[i].y2) / 2;
+			bonds[i].zc = (bonds[i].z1 + bonds[i].z2) / 2;
 
 			if ((bonds[i].atom1Type == inputVectors[0].atom1 && bonds[i].atom2Type == inputVectors[0].atom2) || (bonds[i].atom2Type == inputVectors[0].atom1 && bonds[i].atom1Type == inputVectors[0].atom2))
 			{
 				for (int j = 0; j < datafile.nBonds; ++j)
 				{
-					bonds[j].atom1Type = (int) dumpAtoms[bonds[j].atom1 - 1].atomType; bonds[j].atom2Type = (int) dumpAtoms[bonds[j].atom2 - 1].atomType; bonds[j].x1 = translatePeriodic (dumpAtoms[bonds[j].atom1 - 1].x, dumpAtoms[bonds[j].atom1 - 1].ix, xDist); bonds[j].y1 = translatePeriodic (dumpAtoms[bonds[j].atom1 - 1].y, dumpAtoms[bonds[j].atom1 - 1].iy, yDist); bonds[j].z1 = translatePeriodic (dumpAtoms[bonds[j].atom1 - 1].z, dumpAtoms[bonds[j].atom1 - 1].iz, zDist); bonds[j].x2 = translatePeriodic (dumpAtoms[bonds[j].atom2 - 1].x, dumpAtoms[bonds[j].atom2 - 1].ix, xDist); bonds[j].y2 = translatePeriodic (dumpAtoms[bonds[j].atom2 - 1].y, dumpAtoms[bonds[j].atom2 - 1].iy, yDist); bonds[j].z2 = translatePeriodic (dumpAtoms[bonds[j].atom2 - 1].z, dumpAtoms[bonds[j].atom2 - 1].iz, zDist); bonds[j].xc = (bonds[j].x1 + bonds[j].x2) / 2; bonds[j].yc = (bonds[j].y1 + bonds[j].y2) / 2; bonds[j].zc = (bonds[j].z1 + bonds[j].z2) / 2;
+					bonds[j].atom1Type = (int) dumpAtoms[bonds[j].atom1 - 1].atomType; 
+					bonds[j].atom2Type = (int) dumpAtoms[bonds[j].atom2 - 1].atomType; 
+
+					bonds[j].x1 = translatePeriodic (dumpAtoms[bonds[j].atom1 - 1].x, dumpAtoms[bonds[j].atom1 - 1].ix, xDist);
+					bonds[j].y1 = translatePeriodic (dumpAtoms[bonds[j].atom1 - 1].y, dumpAtoms[bonds[j].atom1 - 1].iy, yDist);
+					bonds[j].z1 = translatePeriodic (dumpAtoms[bonds[j].atom1 - 1].z, dumpAtoms[bonds[j].atom1 - 1].iz, zDist);
+
+					bonds[j].x2 = translatePeriodic (dumpAtoms[bonds[j].atom2 - 1].x, dumpAtoms[bonds[j].atom2 - 1].ix, xDist);
+					bonds[j].y2 = translatePeriodic (dumpAtoms[bonds[j].atom2 - 1].y, dumpAtoms[bonds[j].atom2 - 1].iy, yDist);
+					bonds[j].z2 = translatePeriodic (dumpAtoms[bonds[j].atom2 - 1].z, dumpAtoms[bonds[j].atom2 - 1].iz, zDist);
+
+					bonds[j].xc = (bonds[j].x1 + bonds[j].x2) / 2;
+					bonds[j].yc = (bonds[j].y1 + bonds[j].y2) / 2;
+					bonds[j].zc = (bonds[j].z1 + bonds[j].z2) / 2;
 
 					if ((bonds[j].atom1Type == inputVectors[1].atom1 && bonds[j].atom2Type == inputVectors[1].atom2) || (bonds[j].atom2Type == inputVectors[1].atom1 && bonds[j].atom1Type == inputVectors[1].atom2))
 					{

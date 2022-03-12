@@ -26,7 +26,12 @@ DATA_ATOMS *assignPeaks (DATA_ATOMS *dumpAtoms, DATA_ATOMS *dumpAtomsMod, DATA_B
 
 	for (int i = 0; i < datafile.nAtoms; ++i)
 	{
-		dumpAtomsMod[i].id = dumpAtoms[i].id; dumpAtomsMod[i].atomType = dumpAtoms[i].atomType; dumpAtomsMod[i].molType = 0; dumpAtomsMod[i].x = dumpAtoms[i].x; dumpAtomsMod[i].y = dumpAtoms[i].y; dumpAtomsMod[i].z = dumpAtoms[i].z;
+		dumpAtomsMod[i].id = dumpAtoms[i].id; 
+		dumpAtomsMod[i].atomType = dumpAtoms[i].atomType; 
+		dumpAtomsMod[i].molType = 0; 
+		dumpAtomsMod[i].x = dumpAtoms[i].x; 
+		dumpAtomsMod[i].y = dumpAtoms[i].y; 
+		dumpAtomsMod[i].z = dumpAtoms[i].z;
 	}
 
 	omp_set_num_threads (nThreads);
@@ -35,9 +40,16 @@ DATA_ATOMS *assignPeaks (DATA_ATOMS *dumpAtoms, DATA_ATOMS *dumpAtomsMod, DATA_B
 	{
 		if ((bonds[i].atom1Type == inputVectors[0].atom1 && bonds[i].atom2Type == inputVectors[0].atom2) || (bonds[i].atom2Type == inputVectors[0].atom1 && bonds[i].atom1Type == inputVectors[0].atom2))
 		{
-			bonds[i].atom1Type = (int) dumpAtoms[bonds[i].atom1 - 1].atomType; bonds[i].atom2Type = (int) dumpAtoms[bonds[i].atom2 - 1].atomType;
-			bonds[i].x1 = dumpAtoms[bonds[i].atom1 - 1].x; bonds[i].y1 = dumpAtoms[bonds[i].atom1 - 1].y; bonds[i].z1 = dumpAtoms[bonds[i].atom1 - 1].z;
-			bonds[i].x2 = dumpAtoms[bonds[i].atom2 - 1].x; bonds[i].y2 = dumpAtoms[bonds[i].atom2 - 1].y; bonds[i].z2 = dumpAtoms[bonds[i].atom2 - 1].z;
+			bonds[i].atom1Type = (int) dumpAtoms[bonds[i].atom1 - 1].atomType; 
+			bonds[i].atom2Type = (int) dumpAtoms[bonds[i].atom2 - 1].atomType;
+
+			bonds[i].x1 = dumpAtoms[bonds[i].atom1 - 1].x; 
+			bonds[i].y1 = dumpAtoms[bonds[i].atom1 - 1].y; 
+			bonds[i].z1 = dumpAtoms[bonds[i].atom1 - 1].z;
+
+			bonds[i].x2 = dumpAtoms[bonds[i].atom2 - 1].x; 
+			bonds[i].y2 = dumpAtoms[bonds[i].atom2 - 1].y; 
+			bonds[i].z2 = dumpAtoms[bonds[i].atom2 - 1].z;
 
 			bonds[i].xc = findBondCenter (bonds[i].x1, dumpAtoms[bonds[i].atom1 - 1].ix, bonds[i].x2, dumpAtoms[bonds[i].atom2 - 1].ix, dumpfile.xlo, dumpfile.xhi);
 			bonds[i].yc = findBondCenter (bonds[i].y1, dumpAtoms[bonds[i].atom1 - 1].iy, bonds[i].y2, dumpAtoms[bonds[i].atom2 - 1].iy, dumpfile.ylo, dumpfile.yhi);
@@ -47,9 +59,16 @@ DATA_ATOMS *assignPeaks (DATA_ATOMS *dumpAtoms, DATA_ATOMS *dumpAtomsMod, DATA_B
 			{
 				if ((bonds[j].atom1Type == inputVectors[1].atom1 && bonds[j].atom2Type == inputVectors[1].atom2) || (bonds[j].atom2Type == inputVectors[1].atom1 && bonds[j].atom1Type == inputVectors[1].atom2))
 				{
-					bonds[j].atom1Type = (int) dumpAtoms[bonds[j].atom1 - 1].atomType; bonds[j].atom2Type = (int) dumpAtoms[bonds[j].atom2 - 1].atomType;
-					bonds[j].x1 = dumpAtoms[bonds[j].atom1 - 1].x; bonds[j].y1 = dumpAtoms[bonds[j].atom1 - 1].y; bonds[j].z1 = dumpAtoms[bonds[j].atom1 - 1].z;
-					bonds[j].x2 = dumpAtoms[bonds[j].atom2 - 1].x; bonds[j].y2 = dumpAtoms[bonds[j].atom2 - 1].y; bonds[j].z2 = dumpAtoms[bonds[j].atom2 - 1].z;
+					bonds[j].atom1Type = (int) dumpAtoms[bonds[j].atom1 - 1].atomType; 
+					bonds[j].atom2Type = (int) dumpAtoms[bonds[j].atom2 - 1].atomType;
+
+					bonds[j].x1 = dumpAtoms[bonds[j].atom1 - 1].x; 
+					bonds[j].y1 = dumpAtoms[bonds[j].atom1 - 1].y; 
+					bonds[j].z1 = dumpAtoms[bonds[j].atom1 - 1].z;
+
+					bonds[j].x2 = dumpAtoms[bonds[j].atom2 - 1].x; 
+					bonds[j].y2 = dumpAtoms[bonds[j].atom2 - 1].y; 
+					bonds[j].z2 = dumpAtoms[bonds[j].atom2 - 1].z;
 
 					bonds[j].xc = findBondCenter (bonds[j].x1, dumpAtoms[bonds[j].atom1 - 1].ix, bonds[j].x2, dumpAtoms[bonds[j].atom2 - 1].ix, dumpfile.xlo, dumpfile.xhi);
 					bonds[j].yc = findBondCenter (bonds[j].y1, dumpAtoms[bonds[j].atom1 - 1].iy, bonds[j].y2, dumpAtoms[bonds[j].atom2 - 1].iy, dumpfile.ylo, dumpfile.yhi);

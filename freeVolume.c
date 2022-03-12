@@ -115,6 +115,7 @@ int *computeFreeVolume_checkOccupation (int *isOccupied, int i, DUMPFILE_INFO du
 						printf(" r: %.2f\n", vwdSize[dumpAtoms[m].atomType - 1].radius);
 						arraySize += 100;
 						isOccupied = (int *) realloc (isOccupied, sizeof (int) * arraySize);
+						exit (1);
 					}
 
 					if (distance < (freeVolumeVars.currentProbeSize + (vwdSize[dumpAtoms[m].atomType - 1].radius / 2)))
