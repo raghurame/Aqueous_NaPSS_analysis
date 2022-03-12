@@ -156,17 +156,17 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 				nFreeVolumeCounts++;
 			}
 
-			if (((currentDumpstep % 5) == 0) && (nHBondComputeCounts <= 100))
-			{
-				// computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, currentDumpstep, nThreads);
-				nHBondComputeCounts++;
-			}
+			// if (((currentDumpstep % 5) == 0) && (nHBondComputeCounts <= 100))
+			// {
+			// 	// computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, currentDumpstep, nThreads);
+			// 	nHBondComputeCounts++;
+			// }
 
-			if ((currentDumpstep % 5) == 0 && (nMSDComputeCounts <= 100))
-			{
-				// computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks, inputVectors);
-				nMSDComputeCounts++;
-			}
+			// if ((currentDumpstep % 5) == 0 && (nMSDComputeCounts <= 100))
+			// {
+			// 	// computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks, inputVectors);
+			// 	nMSDComputeCounts++;
+			// }
 
 			isTimestep = 0;
 		}

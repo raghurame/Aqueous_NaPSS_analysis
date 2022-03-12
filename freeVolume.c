@@ -144,6 +144,8 @@ void computeFreeVolume_getDistribution (int i, int j, FREEVOLUME_DISTRIBUTION **
 	// float progressPercent;
 	// isOccupied = (int *) malloc (arraySize * sizeof (int));
 
+	float xDistHalf = (dumpfile.xhi - dumpfile.xlo) / 2, yDistHalf = (dumpfile.yhi - dumpfile.ylo) / 2, zDistHalf = (dumpfile.zhi - dumpfile.zlo) / 2;
+
 	omp_set_num_threads (nThreads);
 
 	#pragma omp parallel for
@@ -173,6 +175,11 @@ void computeFreeVolume_getDistribution (int i, int j, FREEVOLUME_DISTRIBUTION **
 						// Storing probe positions in x2, y2, z2 variables for easy calculations
 						// and checking the distance between the probe and the atoms
 						x2 = probePosition.x; y2 = probePosition.y; z2 = probePosition.z;
+
+						x2 = translatePeriodicDistance (x1, x2, xDistHalf);
+						y2 = translatePeriodicDistance (y1, y2, yDistHalf);
+						z2 = translatePeriodicDistance (z1, z2, zDistHalf);
+
 						distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
 
 						// Loop through the distribution struct and check if the calculated distance falls within the range
