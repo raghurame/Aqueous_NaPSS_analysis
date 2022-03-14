@@ -14,13 +14,13 @@
 
 ORDERPARAMETER *computeOrderParameter (ORDERPARAMETER *allData_array, DATA_ATOMS *dumpAtoms, DUMPFILE_INFO dumpfile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, int currentTimestep, unsigned int nElements)
 {
-	FILE *allData;
-	char *allData_string;
-	allData_string = (char *) malloc (50 * sizeof (char));
-	sprintf (allData_string, "logs/allData_%d.oop", currentTimestep);
-	allData = fopen (allData_string, "w");
+	// FILE *allData;
+	// char *allData_string;
+	// allData_string = (char *) malloc (50 * sizeof (char));
+	// sprintf (allData_string, "logs/allData_%d.oop", currentTimestep);
+	// allData = fopen (allData_string, "w");
 
-	fprintf(allData, "atom1, atom2, atom3, atom4, distance, angle (rad), angle (deg), OOP\n");
+	// fprintf(allData, "atom1, atom2, atom3, atom4, distance, angle (rad), angle (deg), OOP\n");
 
 	// ORDERPARAMETER *allData_array;
 	// allData_array = (ORDERPARAMETER *) malloc (nElements * sizeof (ORDERPARAMETER));
@@ -94,7 +94,7 @@ ORDERPARAMETER *computeOrderParameter (ORDERPARAMETER *allData_array, DATA_ATOMS
 					theta = acosf (cosTheta); 
 					orderParameter = ((3.0 * cosTheta * cosTheta) - 1.0) / 2.0;
 
-					fprintf(allData, "%d %d %d %d %f %f %f %f\n", bonds[i].atom1, bonds[i].atom2, bonds[j].atom1, bonds[j].atom2, distance, theta, theta * 57.2958, orderParameter);
+					// fprintf(allData, "%d %d %d %d %f %f %f %f\n", bonds[i].atom1, bonds[i].atom2, bonds[j].atom1, bonds[j].atom2, distance, theta, theta * 57.2958, orderParameter);
 
 					allData_array[currentElement].atom1 = bonds[i].atom1; 
 					allData_array[currentElement].atom2 = bonds[i].atom2; 
@@ -183,8 +183,8 @@ ORDERPARAMETER *computeOrderParameter (ORDERPARAMETER *allData_array, DATA_ATOMS
 		}
 	}
 
-	fclose (allData);
-	free (allData_string);
+	// fclose (allData);
+	// free (allData_string);
 
 	return allData_array;
 }

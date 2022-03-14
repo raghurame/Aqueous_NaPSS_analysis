@@ -58,6 +58,14 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	char lineString[1000];
 	int isTimestep = 0, currentTimestep, currentLine = 0, currentDumpstep = 0;
 
+	if (isFileExists ("aqNaPSS.restart"))
+	{
+		FILE *restartFile;
+		fgets (lineString, 1000, restartFile);
+		sscanf (lineString, "%d", &currentDumpstep);
+		fclose (restartFile);
+	}
+
 	long int nElements = 0;
 	int isNElementsSet = 0;
 
@@ -180,6 +188,12 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			currentAtomID = 0;
 			previousAtomID = 0;
 			fault = 0;
+
+			// Saving the current progress
+			FILE *restartFile;
+			restartFile = fopen ("aqNaPSS.restart", "w");
+			fprintf(restartFile, "%d", currentDumpstep);
+			fclose (restartFile);
 		}
 
 		if ((currentLine > 9) && (currentLine < (9 + dumpfile.nAtoms)))
