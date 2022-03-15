@@ -61,8 +61,10 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	if (isFileExists ("aqNaPSS.restart"))
 	{
 		FILE *restartFile;
+		restartFile = fopen ("aqNaPSS.restart", "r");
 		fgets (lineString, 1000, restartFile);
 		sscanf (lineString, "%d", &currentDumpstep);
+		printf("\n\nIMPORTANT:\n~~~~~~~~~~\n\nReading restart file. The analysis will begin from %d timeframe in input dump file. If you want to start the analysis from the beginning, then delete the aqNaPSS.restart file and run the program again!\n\n\n");
 		fclose (restartFile);
 	}
 
@@ -143,19 +145,19 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			printf("Scanning timestep: %d; (%d)...               \n", currentTimestep, currentDumpstep);
 			fflush (stdout); 
 
-			if (((currentDumpstep % 5) == 0) && (nBondRDFCounts <= 100))
-			{
-				computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter, currentTimestep);
-				nBondRDFCounts++;
-			}
+			// if (((currentDumpstep % 5) == 0) && (nBondRDFCounts <= 100))
+			// {
+			// 	computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter, currentTimestep);
+			// 	nBondRDFCounts++;
+			// }
 
-			if (((currentDumpstep % 5) == 0) && (nWaterOrientationCounts <= 100))
-			{
-				allData_array = computeOrderParameter (allData_array, dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
-				// computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
-				computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
-				nWaterOrientationCounts++;
-			}
+			// if (((currentDumpstep % 5) == 0) && (nWaterOrientationCounts <= 100))
+			// {
+			// 	allData_array = computeOrderParameter (allData_array, dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
+			// 	// computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
+			// 	computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
+			// 	nWaterOrientationCounts++;
+			// }
 
 			// Calculating free volume distribution once every 4 dump timeframes
 			if ((currentDumpstep % 50) == 0 && (nFreeVolumeCounts <= 5))
@@ -164,17 +166,17 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 				nFreeVolumeCounts++;
 			}
 
-			if (((currentDumpstep % 5) == 0) && (nHBondComputeCounts <= 100))
-			{
-				computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, currentDumpstep, nThreads);
-				nHBondComputeCounts++;
-			}
+			// if (((currentDumpstep % 5) == 0) && (nHBondComputeCounts <= 100))
+			// {
+				// computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, currentDumpstep, nThreads);
+			// 	nHBondComputeCounts++;
+			// }
 
-			if (((currentDumpstep % 5) == 0) && (nMSDComputeCounts <= 500))
-			{
-				computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks, inputVectors);
-				nMSDComputeCounts++;
-			}
+			// if (((currentDumpstep % 5) == 0) && (nMSDComputeCounts <= 500))
+			// {
+			// 	computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks, inputVectors);
+			// 	nMSDComputeCounts++;
+			// }
 
 			isTimestep = 0;
 		}
