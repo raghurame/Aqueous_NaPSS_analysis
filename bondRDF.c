@@ -88,8 +88,10 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 
 						// If i = j, then distance = 0.0
 						// neglect the bond pairs where the distance = 0.0
-						if (distance > 0 && distance <= binEnd_dist_RDF && distance > binStart_dist_RDF)
+						if ((distance > 0) && (distance <= binEnd_dist_RDF) && (distance > binStart_dist_RDF))
+						{
 							nBonds_inBin_dist_RDF[k]++;
+						}
 
 						binStart_dist_RDF = binEnd_dist_RDF;
 					}
@@ -105,14 +107,17 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 			nBonds_RDF++;		
 	}
 
-	bondDensity = (float) nBonds_RDF * 20.0 / simVolume;
+	// Number of monomers = 10;
+	// Number of SO dipoles in every monomer = 3;
+	// So, the number of bonds are multipled by a factor of 30.0.
+	bondDensity = ((float) nBonds_RDF) * 30.0 / simVolume;
 
 	binStart_dist_RDF = 0.0;
 
 	for (int i = 0; i < nBins_dist_RDF; ++i)
 	{
 		binEnd_dist_RDF = binStart_dist_RDF + binSize_dist_RDF;
-		nBonds_inBin_dist_RDF_float[i] = (float) nBonds_inBin_dist_RDF[i] / (4.0 * 3.14 * pow (binStart_dist_RDF, 2) * (binEnd_dist_RDF - binStart_dist_RDF));
+		nBonds_inBin_dist_RDF_float[i] = ((float) nBonds_inBin_dist_RDF[i]) / (4.0 * 3.14 * pow (binStart_dist_RDF, 2) * (binEnd_dist_RDF - binStart_dist_RDF));
 		(*bondRDF)[i] += (float) nBonds_inBin_dist_RDF_float[i] / bondDensity;
 		binStart_dist_RDF = binEnd_dist_RDF;
 	}
