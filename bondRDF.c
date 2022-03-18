@@ -118,7 +118,10 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 	{
 		binEnd_dist_RDF = binStart_dist_RDF + binSize_dist_RDF;
 		nBonds_inBin_dist_RDF_float[i] = ((float) nBonds_inBin_dist_RDF[i]) / (4.0 * 3.14 * pow (binStart_dist_RDF, 2) * (binEnd_dist_RDF - binStart_dist_RDF));
-		(*bondRDF)[i] += (float) nBonds_inBin_dist_RDF_float[i] / bondDensity;
+		(*bondRDF)[i] += ((float) nBonds_inBin_dist_RDF_float[i]) / bondDensity;
+		// printf("%f\n", (*bondRDF)[i]);
+		// fflush (stdout);
+		// usleep (100000);
 		binStart_dist_RDF = binEnd_dist_RDF;
 	}
 
@@ -133,7 +136,7 @@ void printBondRDF (float *bondRDF, int RDFcounter, int nBins_dist_RDF, float bin
 	for (int i = 0; i < nBins_dist_RDF; ++i)
 	{
 		fprintf(file_bondRDF, "%f %f\n", 
-			binSize_dist_RDF * (float) i,
+			binSize_dist_RDF * ((float) i),
 			bondRDF[i]/RDFcounter);
 	}
 
