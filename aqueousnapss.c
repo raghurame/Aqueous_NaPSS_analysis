@@ -56,14 +56,14 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	char lineString[1000];
-	int isTimestep = 0, currentTimestep, currentLine = 0, currentDumpstep = 0;
+	int isTimestep = 0, currentTimestep, currentLine = 0, currentDumpstep = 0, restartDumpStep = 0;
 
 	if (isFileExists ("aqNaPSS.restart"))
 	{
 		FILE *restartFile;
 		restartFile = fopen ("aqNaPSS.restart", "r");
 		fgets (lineString, 1000, restartFile);
-		sscanf (lineString, "%d", &currentDumpstep);
+		sscanf (lineString, "%d", &restartDumpStep);
 		printf("\n\nIMPORTANT:\n~~~~~~~~~~\n\nReading restart file. The analysis will begin from %d timeframe in input dump file. If you want to start the analysis from the beginning, then delete the aqNaPSS.restart file and run the program again!\n\n\n");
 		fclose (restartFile);
 	}
@@ -139,17 +139,17 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 		}
 
 		// Main processing loop
-		if ((currentDumpstep > 2) && (nElements > 0) && (currentLine == 2) && (fault == 0))
+		if ((currentDumpstep > restartDumpStep) && (nElements > 0) && (currentLine == 2) && (fault == 0))
 		{
 			sscanf (lineString, "%d", &currentTimestep);
 			printf("Scanning timestep: %d; (%d)...               \n", currentTimestep, currentDumpstep);
 			fflush (stdout); 
 
-			// if (((currentDumpstep % 5) == 0) && (nBondRDFCounts <= 100))
-			// {
-			// 	computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter, currentTimestep);
-			// 	nBondRDFCounts++;
-			// }
+			if (((currentDumpstep % 5) == 0) && (nBondRDFCounts <= 10))
+			{
+				computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter, currentTimestep);
+				nBondRDFCounts++;
+			}
 
 			// if (((currentDumpstep % 5) == 0) && (nWaterOrientationCounts <= 100))
 			// {
@@ -160,15 +160,15 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			// }
 
 			// Calculating free volume distribution once every 4 dump timeframes
-			if ((currentDumpstep % 50) == 0 && (nFreeVolumeCounts <= 5))
-			{
-				computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, currentDumpstep, nThreads);
-				nFreeVolumeCounts++;
-			}
+			// if ((currentDumpstep % 50) == 0 && (nFreeVolumeCounts <= 5))
+			// {
+			// 	computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, currentDumpstep, nThreads);
+			// 	nFreeVolumeCounts++;
+			// }
 
 			// if (((currentDumpstep % 5) == 0) && (nHBondComputeCounts <= 100))
 			// {
-				// computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, currentDumpstep, nThreads);
+			// 	computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, currentDumpstep, nThreads);
 			// 	nHBondComputeCounts++;
 			// }
 
@@ -179,6 +179,12 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			// }
 
 			isTimestep = 0;
+		}
+		else if ((nElements > 0) && (currentLine == 2) && (fault == 0))
+		{
+			sscanf (lineString, "%d", &currentTimestep);
+			printf("Skipping timestep: %d; (%d)...               \r", currentTimestep, currentDumpstep);
+			fflush (stdout); 
 		}
 
 		if (strstr (lineString, "ITEM: TIMESTEP"))
