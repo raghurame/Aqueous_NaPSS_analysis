@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 import statistics as s
 from collections import Counter as c
 import math as m
+from tqdm import tqdm
 
 def showPlot (y, title, xLabel, yLabel):
 	x = n.arange (1, len (y) + 1)
@@ -31,14 +32,14 @@ def getOnlyNegative (inputData):
 
 def computeTotalArea (inputData):
 	inputNumpy = n.array (inputData)
-	showPlot (inputNumpy, "Unmodified ACF plot", "Time lag", "ACF")
+	# showPlot (inputNumpy, "Unmodified ACF plot", "Time lag", "ACF")
 	totalArea = n.trapz (inputNumpy, dx = 1)
 	return totalArea
 
 def computePositiveArea (inputData):
 	inputData = getOnlyPositive (inputData)
 	inputNumpy = n.array (inputData)
-	showPlot (inputNumpy, "Positive area", "Time lag", "ACF")
+	# showPlot (inputNumpy, "Positive area", "Time lag", "ACF")
 	positiveArea = n.trapz (inputNumpy, dx = 1)
 	return positiveArea
 
@@ -70,8 +71,11 @@ def processRDFfiles (inputFilename):
 def normalizeDistribution (rawDistribution):
 	maxValue = max (rawDistribution)
 
-	for x in range (len (rawDistribution)):
-		rawDistribution[x] = rawDistribution[x] / maxValue
+	if (maxValue == 0):
+		return rawDistribution
+	else:
+		for x in range (len (rawDistribution)):
+			rawDistribution[x] = rawDistribution[x] / maxValue
 
 	return rawDistribution
 
@@ -120,7 +124,7 @@ def getDistribution (list_col1, list_posArea, list_negArea, list_totArea):
 
 	# Distribution of total area
 	binLow = 0
-	for x in range (nBinsTot):
+	for x in tqdm (range (nBinsTot), desc = "Distribution of total area"):
 		binHigh = binLow + binSizeTot
 		for y in range (len (list_totArea)):
 			if list_totArea[y] < binHigh and list_totArea[y] > binLow:
@@ -136,7 +140,7 @@ def getDistribution (list_col1, list_posArea, list_negArea, list_totArea):
 
 	# Distribution of positive area
 	binLow = 0
-	for x in range (nBinsPos):
+	for x in tqdm (range (nBinsPos), desc = "Distribution of positive area"):
 		binHigh = binLow + binSizePos
 		for y in range (len (list_posArea)):
 			if list_posArea[y] < binHigh and list_posArea[y] > binLow:
@@ -152,7 +156,7 @@ def getDistribution (list_col1, list_posArea, list_negArea, list_totArea):
 
 	# Distribution of negative area
 	binLow = 0
-	for x in range (nBinsNeg):
+	for x in tqdm (range (nBinsNeg), desc = "Distribution of negative area"):
 		binHigh = binLow + binSizeNeg
 		for y in range (len (list_negArea)):
 			if list_negArea[y] < binHigh and list_negArea[y] > binLow:
@@ -213,7 +217,7 @@ def main ():
 	list_totArea = []
 	header = []
 	for dirs, dirname, files in os.walk ("bondRDF_processed/"):
-		for file in files:
+		for file in tqdm (files, desc = "reading bondRDF files"):
 			col1, posArea, negArea, totArea = processRDFfiles (file)
 			list_col1.append (col1)
 			list_posArea.append (posArea)
