@@ -97,9 +97,9 @@ int *computeFreeVolume_checkOccupation (int *isOccupied, int i, DUMPFILE_INFO du
 					x1 = dumpAtoms[m].x; y1 = dumpAtoms[m].y; z1 = dumpAtoms[m].z;
 					x2 = probePosition.x; y2 = probePosition.y; z2 = probePosition.z;
 
-					x1 = translatePeriodicDistance (x2, x1, xDistHalf);
-					y1 = translatePeriodicDistance (y2, y1, yDistHalf);
-					z1 = translatePeriodicDistance (z2, z1, zDistHalf);
+					x2 = translatePeriodicDistance (x1, x2, xDistHalf);
+					y2 = translatePeriodicDistance (y1, y2, yDistHalf);
+					z2 = translatePeriodicDistance (z1, z2, zDistHalf);
 					
 					distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
 
@@ -177,9 +177,9 @@ void computeFreeVolume_getDistribution (int i, int j, FREEVOLUME_DISTRIBUTION **
 						// and checking the distance between the probe and the atoms
 						x2 = probePosition.x; y2 = probePosition.y; z2 = probePosition.z;
 
-						x1 = translatePeriodicDistance (x2, x1, xDistHalf);
-						y1 = translatePeriodicDistance (y2, y1, yDistHalf);
-						z1 = translatePeriodicDistance (z2, z1, zDistHalf);
+						x2 = translatePeriodicDistance (x1, x2, xDistHalf);
+						y2 = translatePeriodicDistance (y1, y2, yDistHalf);
+						z2 = translatePeriodicDistance (z1, z2, zDistHalf);
 
 						distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
 

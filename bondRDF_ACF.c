@@ -188,19 +188,19 @@ void computeACF (LOGFILES_VARIABLES_BONDRDF_ACF fileVars, ALL_DATA_BONDRDF_ACF *
 
 		// printing the acf function
 		// printing acf function for first peak
-		lowerLimit = 0; upperLimit = 1.9;
+		lowerLimit = 0; upperLimit = 5.2;
 		printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
 
 		// printing acf function for second peak
-		lowerLimit = 1.9; upperLimit = 4;
+		lowerLimit = 5.2; upperLimit = 10;
 		printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
 
 		// printing acf function for third peak
-		lowerLimit = 4; upperLimit = 6.6;
+		lowerLimit = 10; upperLimit = 15;
 		printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
 
 		// printing acf function beyond third peak for comparison
-		lowerLimit = 6.6; upperLimit = 8.6;
+		lowerLimit = 15; upperLimit = 20;
 		printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
 	}
 }
