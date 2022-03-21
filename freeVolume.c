@@ -186,8 +186,8 @@ void computeFreeVolume_getDistribution (int i, int j, FREEVOLUME_DISTRIBUTION **
 						// Loop through the distribution struct and check if the calculated distance falls within the range
 						for (int o = 0; o < freeVolumeVars.nBins_dist; ++o)
 						{
-							if (distance > (*freeVolumeDist)[o].binStart_dist && distance <= (*freeVolumeDist)[o].binEnd_dist)
-							{
+							if ((distance > (*freeVolumeDist)[o].binStart_dist) && (distance <= (*freeVolumeDist)[o].binEnd_dist))
+							{								
 								if (isOccupied[index1d] == 0)
 								{
 									(*freeVolumeDist)[o].nUnoccupied++;
@@ -227,7 +227,7 @@ void initializeFreeVolumeDistribution (FREEVOLUME_DISTRIBUTION **freeVolumeDist,
 
 void initializeNBins (FREEVOLUME_VARS *freeVolumeVars)
 {
-	(*freeVolumeVars).delDistance = 0.25 * (*freeVolumeVars).currentProbeSize;
+	(*freeVolumeVars).delDistance = 0.5 * (*freeVolumeVars).currentProbeSize;
 	(*freeVolumeVars).nBins_dist_x = (int) ((*freeVolumeVars).xLength / (*freeVolumeVars).delDistance);
 	(*freeVolumeVars).nBins_dist_y = (int) ((*freeVolumeVars).yLength / (*freeVolumeVars).delDistance);
 	(*freeVolumeVars).nBins_dist_z = (int) ((*freeVolumeVars).zLength / (*freeVolumeVars).delDistance);
