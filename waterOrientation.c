@@ -301,7 +301,7 @@ void computeDistribution_theta (ORDERPARAMETER *allData_array, DIST_VAR plotVars
 			#pragma omp parallel for
 			for (int k = 0; k < plotVars.nElements; ++k)
 			{
-				if (allData_array[k].theta_deg <= currentBounds.binEnd_deg && allData_array[k].theta_deg > currentBounds.binStart_deg && allData_array[k].distance <= currentBounds.binEnd_dist && allData_array[k].distance > currentBounds.binStart_dist)
+				if ((allData_array[k].theta_deg <= currentBounds.binEnd_deg) && (allData_array[k].theta_deg > currentBounds.binStart_deg) && (allData_array[k].distance <= currentBounds.binEnd_dist) && (allData_array[k].distance > currentBounds.binStart_dist))
 				{
 					index1d = getIndex1d (i, j, plotVars.nBins_dist);
 

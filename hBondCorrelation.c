@@ -120,7 +120,7 @@ void analyzeHBondNetwork (DATA_ATOMS *dumpAtomsMod, DATAFILE_INFO datafile, DUMP
 
 	// Iterating through all atom pairs to check the H-O distance
 	omp_set_num_threads (nThreads); printf("\n");
-	#pragma omp parallel for
+	// #pragma omp parallel for
 	for (int i = 0; i < datafile.nAtoms; ++i)
 	{
 		loopCounter++;
@@ -377,7 +377,7 @@ void initializeHBondNetworkLogfile ()
 	hBondNetwork_logfile = fopen ("hBondNetwork_logs/hBondNetwork.log", "w");
 
 	// Writing the first line
-	fprintf(hBondNetwork_logfile, "N firstToSecond, N secondToThird, N thirdToFourth, N Mols Zeroth, N Mols First, N Mols Second, N Mols Third, N Mols Fourth\n");
+	fprintf(hBondNetwork_logfile, "# N firstToSecond, N secondToThird, N thirdToFourth, N Mols Zeroth, N Mols First, N Mols Second, N Mols Third, N Mols Fourth\n");
 
 	printf("Created hBond network log file\n");
 	fflush (stdout);
