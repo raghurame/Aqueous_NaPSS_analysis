@@ -130,6 +130,8 @@ void analyzeHBondNetwork (DATA_ATOMS *dumpAtomsMod, DATAFILE_INFO datafile, DUMP
 			fflush (stdout);
 		}
 
+		// The second line in bondRDF.config contains dipoles in solvent
+		// This 'if' statement checks if the 'i'th atom corresponds to the solvent atom
 		if (dumpAtomsMod[i].atomType == inputVectors[1].atom1 || dumpAtomsMod[i].atomType == inputVectors[1].atom2)
 		{
 			for (int j = 0; j < datafile.nAtoms; ++j)
@@ -305,7 +307,7 @@ void computeHBondCorrelation2 (const char *fileTemplate, int nTimeframes, int nT
 
 	for (int i = 0; i < nTimeframes; ++i)
 	{
-		fprintf(bondCorrelation_File, "%f\n", log (avgCorrelation[i] / avgCorrelation[0]));
+		fprintf(bondCorrelation_File, "%f %f %f %f\n", log (avgCorrelation[i] / avgCorrelation[0]), (avgCorrelation[i] / avgCorrelation[0]), avgCorrelation[i], avgCorrelation[0]);
 	}
 
 	fclose (bondCorrelation_File);
