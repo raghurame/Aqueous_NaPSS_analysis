@@ -145,13 +145,13 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			printf("Scanning timestep: %d; (%d)...               \n", currentTimestep, currentDumpstep);
 			fflush (stdout); 
 
-			// if (((currentDumpstep % 5) == 0) && (nBondRDFCounts <= 100))
-			// {
-			// 	computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter, currentTimestep);
-			// 	nBondRDFCounts++;
-			// }
+			if (((currentDumpstep % 5) == 0) && (nBondRDFCounts <= 200))
+			{
+				computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter, currentTimestep);
+				nBondRDFCounts++;
+			}
 
-			// if (((currentDumpstep % 5) == 0) && (nWaterOrientationCounts <= 100))
+			// if (((currentDumpstep % 5) == 0) && (nWaterOrientationCounts <= 200))
 			// {
 			// 	allData_array = computeOrderParameter (allData_array, dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
 			// 	// computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
@@ -159,11 +159,11 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			// 	nWaterOrientationCounts++;
 			// }
 
-			if ((currentDumpstep % 25) == 0 && (nFreeVolumeCounts <= 25))
-			{
-				computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, currentDumpstep, nThreads);
-				nFreeVolumeCounts++;
-			}
+			// if ((currentDumpstep % 25) == 0 && (nFreeVolumeCounts <= 25))
+			// {
+			// 	computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, currentDumpstep, nThreads);
+			// 	nFreeVolumeCounts++;
+			// }
 
 			// if (((currentDumpstep % 5) == 0) && (nHBondComputeCounts <= 20))
 			// {
@@ -227,9 +227,15 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 		currentLine++;
 	}
 
-	// printDistribution_OOP (distribution_OOP, plotVars);
-	printDistribution_degrees (distribution_degrees, plotVars);
-	printBondRDF (bondRDF, RDFcounter, nBins_dist_RDF, binSize_dist_RDF);
+	if (nWaterOrientationCounts > 0)
+	{
+		// printDistribution_OOP (distribution_OOP, plotVars);
+		printDistribution_degrees (distribution_degrees, plotVars);
+	}
+	if (nBondRDFCounts > 0)
+	{
+		printBondRDF (bondRDF, RDFcounter, nBins_dist_RDF, binSize_dist_RDF);
+	}
 
 	free (distribution_OOP);
 	free (distribution_degrees);
