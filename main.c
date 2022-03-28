@@ -96,9 +96,9 @@ int main (int argc, char const *argv[])
 
 	processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors, freeVolumeconfig, vwdSize, entries, nThreads);
 
-	computeHBondCorrelation (inputDumpFile, nThreads);
+	// computeHBondCorrelation (inputDumpFile, nThreads);
 
-	computeACFOfBondRDF (inputDumpFile);
+	// computeACFOfBondRDF (inputDumpFile);
 
 	free (atoms);
 	free (bonds);

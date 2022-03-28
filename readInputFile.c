@@ -338,24 +338,75 @@ DUMPFILE_INFO getDumpFileInfo (FILE *inputDumpFile)
 
 int countNTimeframes (FILE *inputDumpFile)
 {
+	printf("Counting the number of timeframes in input dump file...\n");
+	fflush (stdout);
+
 	rewind (inputDumpFile);
 
-	int nLines = 0, nTimeframes;
+	int nLines = 0, nTimeframes = 0, nTimeframes2 = 0;
 	char lineString[1000];
 
 	DUMPFILE_INFO dumpfile;
 	dumpfile = getDumpFileInfo (inputDumpFile);
+	int fault = 0, nAtoms, currentAtomID;
 
 	while ((fgets (lineString, 1000, inputDumpFile) != NULL))
 	{
 		nLines++;
+
+		if (strstr (lineString, "ITEM: TIMESTEP"))
+		{
+			startAgain:
+			fault = 0;
+
+			for (int i = 0; i < 8; ++i)
+			{
+				fgets (lineString, 1000, inputDumpFile);
+				nLines++;
+
+				if (i == 1 && strstr (lineString, "ITEM: NUMBER OF ATOMS") == 0)
+					fault++;
+				if (i == 2)
+					sscanf (lineString, "%d\n", &nAtoms);
+				if (i == 3 && strstr (lineString, "ITEM: BOX") == 0)
+					fault++;
+				if (i == 7 && strstr (lineString, "ITEM: ATOMS") == 0)
+					fault++;
+				if (strstr (lineString, "ITEM: TIMESTEP"))
+					goto startAgain;
+			}
+
+			for (int i = 0; i < nAtoms; ++i)
+			{
+				fgets (lineString, 1000, inputDumpFile);
+				nLines++;
+				sscanf (lineString, "%d \n", &currentAtomID);
+
+				if (currentAtomID != (i + 1))
+					fault++;
+				if (strstr (lineString, "ITEM: TIMESTEP"))
+					goto startAgain;
+			}
+
+			// if fault is zero at the end of the timestep, then increment the variable
+			if (fault == 0)
+			{
+				nTimeframes2++;
+				if ((nTimeframes2 % 50) == 0)
+				{
+					printf("Scanning timestep: %5d    \r", nTimeframes2);
+					fflush (stdout);
+				}
+			}
+		}
 	}
 
 	rewind (inputDumpFile);
 
-	printf("Number of lines in the input dumpfile: %d\n", nLines);
+	printf("\nNumber of lines in the input dumpfile: %d\n", nLines);
 	nTimeframes = nLines / (dumpfile.nAtoms + 9);
-	printf("Number of timeframes: %d\n", nTimeframes);
+	printf("nTimeframes:  %d\n", nTimeframes);
+	printf("nTimeframes2: %d\n", nTimeframes2);
 
-	return nTimeframes;
+	return nTimeframes2;
 }

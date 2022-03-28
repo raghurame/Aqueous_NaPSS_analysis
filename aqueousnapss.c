@@ -145,11 +145,11 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			printf("Scanning timestep: %d; (%d)...               \n", currentTimestep, currentDumpstep);
 			fflush (stdout); 
 
-			if (((currentDumpstep % 5) == 0) && (nBondRDFCounts <= 10))
-			{
-				computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter, currentTimestep);
-				nBondRDFCounts++;
-			}
+			// if (((currentDumpstep % 5) == 0) && (nBondRDFCounts <= 100))
+			// {
+			// 	computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter, currentTimestep);
+			// 	nBondRDFCounts++;
+			// }
 
 			// if (((currentDumpstep % 5) == 0) && (nWaterOrientationCounts <= 100))
 			// {
@@ -159,14 +159,13 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			// 	nWaterOrientationCounts++;
 			// }
 
-			// Calculating free volume distribution once every 4 dump timeframes
-			// if ((currentDumpstep % 50) == 0 && (nFreeVolumeCounts <= 5))
-			// {
-			// 	computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, currentDumpstep, nThreads);
-			// 	nFreeVolumeCounts++;
-			// }
+			if ((currentDumpstep % 25) == 0 && (nFreeVolumeCounts <= 25))
+			{
+				computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, currentDumpstep, nThreads);
+				nFreeVolumeCounts++;
+			}
 
-			// if (((currentDumpstep % 5) == 0) && (nHBondComputeCounts <= 100))
+			// if (((currentDumpstep % 5) == 0) && (nHBondComputeCounts <= 20))
 			// {
 			// 	computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, currentDumpstep, nThreads);
 			// 	nHBondComputeCounts++;
@@ -223,10 +222,8 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 				printf("Fault found in lammpstrj. This timeframe will be ignored !\n");
 				fault++;
 			}
-
 			previousAtomID = currentAtomID;
 		}
-
 		currentLine++;
 	}
 

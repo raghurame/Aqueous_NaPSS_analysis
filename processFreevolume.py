@@ -16,7 +16,8 @@ def processFiles (fileName):
 	delInterval = 0
 	nOccupied = {}
 	nUnoccupied = {}
-	nTimeframes = 0
+	fractionalFreeVolume = {}
+	nTimeframes = {}
 	density = 0.93
 
 	with open (fileName, "r") as inputFile:
@@ -25,21 +26,22 @@ def processFiles (fileName):
 			# print (logData)
 			if (delInterval == 0):
 				delInterval = logData[1] - logData[0]
-				# print ("delInterval: ", delInterval)
 			try:
+				fractionalFreeVolume [float (logData[0])] += float (logData[4])
 				nOccupied[float (logData[0])] += int (logData[2])
 				nUnoccupied[float (logData[0])] += int (logData[3])
-				nTimeframes += 1
+				nTimeframes[float (logData[0])] += 1
 			except:
+				fractionalFreeVolume [float (logData[0])] = 0 # ignoring the first timeframe data
 				nOccupied[float (logData[0])] = int (logData[2])
 				nUnoccupied[float (logData[0])] = int (logData[3])
-				nTimeframes += 1
+				nTimeframes[float (logData[0])] = 0
 
 	outputFilename = fileName.replace (".log", ".processed")
 
 	with open (outputFilename, "w") as outputFile:
 		for key in nOccupied:
-			outputString = ("{} {} {} {} {}\n".format (float (key), (float (key) + float (delInterval)), nOccupied[key], nUnoccupied[key], nUnoccupied[key] / (nUnoccupied[key] + nOccupied[key])))
+			outputString = ("{} {} {}\n".format (float (key), float (fractionalFreeVolume [key]), float (fractionalFreeVolume[key] / (nTimeframes[key] - 1))))
 			outputFile.write (outputString)		
 
 def checkAllFiles ():
@@ -57,4 +59,7 @@ def main ():
 	checkAllFiles ()
 
 if __name__ == '__main__':
+	if (len (sys.argv) != 2):
+		print ("Insufficient number of arguments passed.\n\nREQUIRED ARGUMENTS:\n~~~~~~~~~~~~~~~~~~~\n\nargv[0] = python program.py\nargv[1] = string template to search from subdirectories.\n\n")
+		exit (1);
 	main()

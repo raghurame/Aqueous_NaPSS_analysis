@@ -242,10 +242,10 @@ float *findHBondCorrelation (const char *filename, int nTimeframes, int nThreads
 		}
 	}
 
-	for (int i = 0; i < nTimeframes; ++i)
-	{
-		correlation[i] /= nTimeframes;
-	}
+	// for (int i = 0; i < nTimeframes; ++i)
+	// {
+	// 	correlation[i] /= nTimeframes;
+	// }
 
 	fclose (hBondLogfile);
 	return correlation;
@@ -307,7 +307,14 @@ void computeHBondCorrelation2 (const char *fileTemplate, int nTimeframes, int nT
 
 	for (int i = 0; i < nTimeframes; ++i)
 	{
-		fprintf(bondCorrelation_File, "%f %f %f %f\n", log (avgCorrelation[i] / avgCorrelation[0]), (avgCorrelation[i] / avgCorrelation[0]), avgCorrelation[i], avgCorrelation[0]);
+		if (avgCorrelation[i] > 0)
+		{
+			fprintf(bondCorrelation_File, "%f %f %f %f\n", 
+				log (avgCorrelation[i] / avgCorrelation[0]), 
+				(avgCorrelation[i] / avgCorrelation[0]), 
+				avgCorrelation[i], 
+				avgCorrelation[0]);
+		}
 	}
 
 	fclose (bondCorrelation_File);
