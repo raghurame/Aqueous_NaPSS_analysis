@@ -32,7 +32,7 @@ def processFiles (fileName):
 				nUnoccupied[float (logData[0])] += int (logData[3])
 				nTimeframes[float (logData[0])] += 1
 			except:
-				fractionalFreeVolume [float (logData[0])] = 0 # ignoring the first timeframe data
+				fractionalFreeVolume [float (logData[0])] = float (logData[4])
 				nOccupied[float (logData[0])] = int (logData[2])
 				nUnoccupied[float (logData[0])] = int (logData[3])
 				nTimeframes[float (logData[0])] = 0

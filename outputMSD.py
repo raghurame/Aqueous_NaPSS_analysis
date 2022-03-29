@@ -63,11 +63,14 @@ def processPeak (targetDirectory, fileNameTemplate, delT_dump):
 	nplogX = n.array (logX)
 	nplogY = n.array (logY)
 
-	slope_intercept = n.polyfit (nplogX, nplogY, 1)
-	print (slope_intercept)
+	try:
+		slope_intercept = n.polyfit (nplogX, nplogY, 1)
+		print (slope_intercept)
 
-	with open ("diffusionConstant_log" + fileNameTemplate, "w") as outputDiffusionConstant:
-		outputDiffusionConstant.write (str (slope_intercept[0]/6) + "\n")
+		with open ("diffusionConstant_log" + fileNameTemplate, "w") as outputDiffusionConstant:
+			outputDiffusionConstant.write (str (slope_intercept[0]/6) + "\n")
+	except:
+		pass
 
 	logX = []
 	logY = []
@@ -88,11 +91,14 @@ def processPeak (targetDirectory, fileNameTemplate, delT_dump):
 	nplogX = n.array (logX[:lenX])
 	nplogY = n.array (logY[:lenY])
 
-	slope_intercept = n.polyfit (nplogX, nplogY, 1)
-	print (slope_intercept)
+	try:
+		slope_intercept = n.polyfit (nplogX, nplogY, 1)
+		print (slope_intercept)
 
-	with open ("diffusionConstant" + fileNameTemplate, "w") as outputDiffusionConstant:
-		outputDiffusionConstant.write (str (slope_intercept[0]/6) + "\n")
+		with open ("diffusionConstant" + fileNameTemplate, "w") as outputDiffusionConstant:
+			outputDiffusionConstant.write (str (slope_intercept[0]/6) + "\n")
+	except:
+		pass
 
 def main (delT_dump):
 	processPeak ("MSD_logs/", "_1.msd", delT_dump)
