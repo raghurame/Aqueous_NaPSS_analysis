@@ -78,7 +78,6 @@ int *computeFreeVolume_checkOccupation (int *isOccupied, int i, DUMPFILE_INFO du
 
 	float xDistHalf = (dumpfile.xhi - dumpfile.xlo) / 2, yDistHalf = (dumpfile.yhi - dumpfile.ylo) / 2, zDistHalf = (dumpfile.zhi - dumpfile.zlo) / 2;
 
-	#pragma omp parallel for
 	for (int j = 0; j < freeVolumeVars.nBins_dist_x; ++j)
 	{
 		probePosition.y = dumpfile.ylo;
@@ -92,6 +91,7 @@ int *computeFreeVolume_checkOccupation (int *isOccupied, int i, DUMPFILE_INFO du
 				printf("Checking site occupation for probeSize: %.2f... %3.4f %% completed            \r\r", freeVolumeVars.currentProbeSize, progressPercent * 100.0);
 				fflush (stdout);
 
+				#pragma omp parallel for
 				for (int m = 0; m < dumpfile.nAtoms; ++m)
 				{
 					x1 = dumpAtoms[m].x; y1 = dumpAtoms[m].y; z1 = dumpAtoms[m].z;
@@ -102,6 +102,9 @@ int *computeFreeVolume_checkOccupation (int *isOccupied, int i, DUMPFILE_INFO du
 					z2 = translatePeriodicDistance (z1, z2, zDistHalf);
 					
 					distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
+					printf ("(%.3f %.3f %.3f), (%.3f %.3f %.3f) => %.3f\n", x1, y1, z1, x2, y2, z2, distance);
+					fflush (stdout);
+					sleep (1);
 
 					index1d = getIndex1d_from3d (j, freeVolumeVars.nBins_dist_x, k, freeVolumeVars.nBins_dist_y, l, freeVolumeVars.nBins_dist_z);
 					// printf("Checking occupation => index1d: %lld/%lld;", index1d, arraySize);
