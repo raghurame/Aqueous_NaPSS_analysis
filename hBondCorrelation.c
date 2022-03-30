@@ -307,7 +307,7 @@ void computeHBondCorrelation2 (const char *fileTemplate, int nTimeframes, int nT
 
 	for (int i = 0; i < nTimeframes; ++i)
 	{
-		if (avgCorrelation[i] > 0)
+		if (avgCorrelation[i] != 0)
 		{
 			fprintf(bondCorrelation_File, "%f %f %f %f\n", 
 				log (avgCorrelation[i] / avgCorrelation[0]), 
