@@ -12,7 +12,7 @@
 #include "bondRDF.h"
 #include "generalUtilities.h"
 
-void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, DATA_BONDS *bonds, CONFIG *inputVectors, DIST_VAR plotVars, int nThreads, float binSize_dist_RDF, float **bondRDF, int *RDFcounter, int currentTimestep)
+int *computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, DATA_BONDS *bonds, CONFIG *inputVectors, DIST_VAR plotVars, int nThreads, float binSize_dist_RDF, float **bondRDF, int *RDFcounter, int currentTimestep)
 {
 	FILE *bondRDF_logfile;
 	char *bondRDF_logfilename;
@@ -50,8 +50,6 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 			bonds[i].yc = findBondCenter (bonds[i].y1, dumpAtoms[bonds[i].atom1 - 1].iy, bonds[i].y2, dumpAtoms[bonds[i].atom2 - 1].iy, dumpfile.ylo, dumpfile.yhi);
 			bonds[i].zc = findBondCenter (bonds[i].z1, dumpAtoms[bonds[i].atom1 - 1].iz, bonds[i].z2, dumpAtoms[bonds[i].atom2 - 1].iz, dumpfile.zlo, dumpfile.zhi);
 
-			// bonds[i].xc = (bonds[i].x1 + bonds[i].x2) / 2; bonds[i].yc = (bonds[i].y1 + bonds[i].y2) / 2; bonds[i].zc = (bonds[i].z1 + bonds[i].z2) / 2;
-
 			for (int j = 0; j < datafile.nBonds; ++j)
 			{
 				if ((bonds[j].atom1Type == inputVectors[1].atom1 && bonds[j].atom2Type == inputVectors[1].atom2) || (bonds[j].atom2Type == inputVectors[1].atom1 && bonds[j].atom1Type == inputVectors[1].atom2))
@@ -64,19 +62,10 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 					bonds[j].yc = findBondCenter (bonds[j].y1, dumpAtoms[bonds[j].atom1 - 1].iy, bonds[j].y2, dumpAtoms[bonds[j].atom2 - 1].iy, dumpfile.ylo, dumpfile.yhi);
 					bonds[j].zc = findBondCenter (bonds[j].z1, dumpAtoms[bonds[j].atom1 - 1].iz, bonds[j].z2, dumpAtoms[bonds[j].atom2 - 1].iz, dumpfile.zlo, dumpfile.zhi);
 
-					// bonds[j].xc = (bonds[j].x1 + bonds[j].x2) / 2; bonds[j].yc = (bonds[j].y1 + bonds[j].y2) / 2; bonds[j].zc = (bonds[j].z1 + bonds[j].z2) / 2;
-
 					x_translated = translatePeriodicDistance (bonds[i].xc, bonds[j].xc, xDistHalf);
 					y_translated = translatePeriodicDistance (bonds[i].yc, bonds[j].yc, yDistHalf);
 					z_translated = translatePeriodicDistance (bonds[i].zc, bonds[j].zc, zDistHalf);
 
-					// if ((x_translated != bonds[j].xc) || (y_translated != bonds[j].yc) || (z_translated != bonds[j].zc))
-					// {
-					// 	printf("before translation => [%.3f, %.3f, %.3f] <=> ref: [%.3f, %.3f, %.3f]\nafter translation => [%.3f, %.3f, %.3f] <=> ref: [%.3f, %.3f, %.3f]\n\n", bonds[j].xc, bonds[j].yc, bonds[j].zc, bonds[i].xc, bonds[i].yc, bonds[i].zc, x_translated, y_translated, z_translated, bonds[i].xc, bonds[i].yc, bonds[i].zc);
-					// 	sleep (1);
-					// }
-
-					// distance = sqrt (pow ((bonds[i].xc - bonds[j].xc), 2) + pow ((bonds[i].yc - bonds[j].yc), 2) + pow ((bonds[i].zc - bonds[j].zc), 2));
 					distance = sqrt (pow ((bonds[i].xc - x_translated), 2) + pow ((bonds[i].yc - y_translated), 2) + pow ((bonds[i].zc - z_translated), 2));
 					binStart_dist_RDF = 0.0;
 
@@ -111,6 +100,7 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 	// Number of SO dipoles in every monomer = 3;
 	// So, the number of bonds are multipled by a factor of 30.0.
 	bondDensity = ((float) nBonds_RDF) * 30.0 / simVolume;
+	// printf("nBonds_RDF: %d x 30.0 / %f", nBonds_RDF, simVolume);
 
 	binStart_dist_RDF = 0.0;
 
@@ -119,25 +109,39 @@ void computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 		binEnd_dist_RDF = binStart_dist_RDF + binSize_dist_RDF;
 		nBonds_inBin_dist_RDF_float[i] = ((float) nBonds_inBin_dist_RDF[i]) / (4.0 * 3.14 * pow (binStart_dist_RDF, 2) * (binEnd_dist_RDF - binStart_dist_RDF));
 		(*bondRDF)[i] += ((float) nBonds_inBin_dist_RDF_float[i]) / bondDensity;
-		// printf("%f\n", (*bondRDF)[i]);
+		// printf("%d %f %f %f\n", nBonds_inBin_dist_RDF[i], nBonds_inBin_dist_RDF_float[i], (*bondRDF)[i], bondDensity);
 		// fflush (stdout);
 		// usleep (100000);
 		binStart_dist_RDF = binEnd_dist_RDF;
 	}
 
 	fclose (bondRDF_logfile);
+
+	int *nBonds_inBin_dist_RDF_summation;
+	nBonds_inBin_dist_RDF_summation = (int *) calloc (nBins_dist_RDF, sizeof (int));
+
+	for (int i = 0; i < nBins_dist_RDF; ++i)
+	{
+		for (int j = 0; j <= i; ++j)
+		{
+			nBonds_inBin_dist_RDF_summation[i] += nBonds_inBin_dist_RDF[j];
+		}
+	}
+
+	return nBonds_inBin_dist_RDF_summation;
 }
 
-void printBondRDF (float *bondRDF, int RDFcounter, int nBins_dist_RDF, float binSize_dist_RDF)
+void printBondRDF (float *bondRDF, int RDFcounter, int nBins_dist_RDF, float binSize_dist_RDF, int *nBonds_inBin_dist_RDF_summation)
 {
 	FILE *file_bondRDF;
 	file_bondRDF = fopen ("bondRDF.output", "w");
 
 	for (int i = 0; i < nBins_dist_RDF; ++i)
 	{
-		fprintf(file_bondRDF, "%f %f\n", 
+		fprintf(file_bondRDF, "%f %f %f\n", 
 			binSize_dist_RDF * ((float) i),
-			bondRDF[i]/RDFcounter);
+			(bondRDF[i] / RDFcounter),
+			(float) nBonds_inBin_dist_RDF_summation[i] / (float) RDFcounter);
 	}
 
 	fclose (file_bondRDF);
