@@ -101,6 +101,10 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	// Limiting the number of timeframes to compute
 	int nFreeVolumeCounts = 0, nBondRDFCounts = 0, nWaterOrientationCounts = 0, nHBondComputeCounts = 0, nMSDComputeCounts = 0;
 
+	// Variable to store the number of bonds (dipoles) present in the distance bin
+	int *nBonds_inBin_dist_RDF_summation, *nBonds_inBin_dist_RDF_temp;
+	nBonds_inBin_dist_RDF_summation = (int *) calloc (nBins_dist_RDF, sizeof (int));
+
 	// Reading and processing dump information
 	while (fgets (lineString, 1000, inputDumpFile) != NULL)
 	{
@@ -147,8 +151,15 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 
 			if (((currentDumpstep % 5) == 0) && (nBondRDFCounts <= 200))
 			{
-				computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter, currentTimestep);
+				nBonds_inBin_dist_RDF_temp = computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter, currentTimestep);
 				nBondRDFCounts++;
+
+				// Summing up the number of bonds for all timeframes
+				// This will give us the number of elements till that shell, instead of radial density
+				for (int k = 0; k < nBins_dist_RDF; ++k)
+				{
+					nBonds_inBin_dist_RDF_summation[k] += nBonds_inBin_dist_RDF_temp[k];
+				}
 			}
 
 			// if (((currentDumpstep % 5) == 0) && (nWaterOrientationCounts <= 200))
@@ -159,7 +170,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			// 	nWaterOrientationCounts++;
 			// }
 
-			// if ((currentDumpstep % 25) == 0 && (nFreeVolumeCounts <= 25))
+			// if ((currentDumpstep % 1) == 0 && (nFreeVolumeCounts <= 25))
 			// {
 			// 	computeFreeVolume (freeVolumeVars, dumpAtoms, dumpfile, freeVolumeconfig, vwdSize, entries, currentDumpstep, nThreads);
 			// 	nFreeVolumeCounts++;
@@ -234,7 +245,7 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	}
 	if (nBondRDFCounts > 0)
 	{
-		printBondRDF (bondRDF, RDFcounter, nBins_dist_RDF, binSize_dist_RDF);
+		printBondRDF (bondRDF, RDFcounter, nBins_dist_RDF, binSize_dist_RDF, nBonds_inBin_dist_RDF_summation);
 	}
 
 	free (distribution_OOP);
