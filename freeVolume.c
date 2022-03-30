@@ -102,9 +102,6 @@ int *computeFreeVolume_checkOccupation (int *isOccupied, int i, DUMPFILE_INFO du
 					z2 = translatePeriodicDistance (z1, z2, zDistHalf);
 					
 					distance = sqrt (pow ((x2 - x1), 2) + pow ((y2 - y1), 2) + pow ((z2 - z1), 2));
-					printf ("(%.3f %.3f %.3f), (%.3f %.3f %.3f) => %.3f\n", x1, y1, z1, x2, y2, z2, distance);
-					fflush (stdout);
-					sleep (1);
 
 					index1d = getIndex1d_from3d (j, freeVolumeVars.nBins_dist_x, k, freeVolumeVars.nBins_dist_y, l, freeVolumeVars.nBins_dist_z);
 					// printf("Checking occupation => index1d: %lld/%lld;", index1d, arraySize);
@@ -152,7 +149,7 @@ void computeFreeVolume_getDistribution (int i, int j, FREEVOLUME_DISTRIBUTION **
 
 	omp_set_num_threads (nThreads);
 
-	#pragma omp parallel for
+	// #pragma omp parallel for
 	for (int k = 0; k < dumpfile.nAtoms; ++k)
 	{
 		progress++;
