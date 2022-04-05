@@ -128,7 +128,7 @@ int *computeBondRDF (DATA_ATOMS *dumpAtoms, DATAFILE_INFO datafile, DUMPFILE_INF
 		}
 	}
 
-	return nBonds_inBin_dist_RDF_summation;
+	return nBonds_inBin_dist_RDF;
 }
 
 void printBondRDF (float *bondRDF, int RDFcounter, int nBins_dist_RDF, float binSize_dist_RDF, int *nBonds_inBin_dist_RDF_summation)

@@ -84,9 +84,9 @@ def processPeak (targetDirectory, fileNameTemplate, delT_dump):
 	lenX = m.ceil (len (logX) / 2)
 	lenY = m.ceil (len (logY) / 2)
 
-	for x in range (0, (lenX * 2)):
-		print (logX[x], logY[x])
-		sleep (1)
+	# for x in range (0, (lenX * 2)):
+	# 	print (logX[x], logY[x])
+	# 	sleep (1)
 
 	nplogX = n.array (logX[:lenX])
 	nplogY = n.array (logY[:lenY])
