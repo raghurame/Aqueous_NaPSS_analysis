@@ -105,6 +105,9 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 	int *nBonds_inBin_dist_RDF_summation, *nBonds_inBin_dist_RDF_temp;
 	nBonds_inBin_dist_RDF_summation = (int *) calloc (nBins_dist_RDF, sizeof (int));
 
+	// The following variables can be used if the input dump file contains scaled coordinates
+	double x_temp, y_temp, z_temp;
+
 	// Reading and processing dump information
 	while (fgets (lineString, 1000, inputDumpFile) != NULL)
 	{
@@ -149,26 +152,24 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			printf("Scanning timestep: %d; (%d)...               \n", currentTimestep, currentDumpstep);
 			fflush (stdout); 
 
-			if (((currentDumpstep % 5) == 0) && (nBondRDFCounts <= 200))
+			if (((currentDumpstep % 1) == 0) && (nBondRDFCounts <= 200))
 			{
 				nBonds_inBin_dist_RDF_temp = computeBondRDF (dumpAtoms, datafile, dumpfile, bonds, inputVectors, plotVars, nThreads, binSize_dist_RDF, &bondRDF, &RDFcounter, currentTimestep);
 				nBondRDFCounts++;
 
-				// Summing up the number of bonds for all timeframes
-				// This will give us the number of elements till that shell, instead of radial density
 				for (int k = 0; k < nBins_dist_RDF; ++k)
 				{
 					nBonds_inBin_dist_RDF_summation[k] += nBonds_inBin_dist_RDF_temp[k];
 				}
 			}
 
-			// if (((currentDumpstep % 5) == 0) && (nWaterOrientationCounts <= 200))
-			// {
-			// 	allData_array = computeOrderParameter (allData_array, dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
-			// 	// computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
-			// 	computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
-			// 	nWaterOrientationCounts++;
-			// }
+			if (((currentDumpstep % 1) == 0) && (nWaterOrientationCounts <= 200))
+			{
+				allData_array = computeOrderParameter (allData_array, dumpAtoms, dumpfile, datafile, bonds, inputVectors, currentTimestep, nElements);
+				// computeDistribution_OOP (allData_array, plotVars, &distribution_OOP, nThreads);
+				computeDistribution_theta (allData_array, plotVars, &distribution_degrees, nThreads);
+				nWaterOrientationCounts++;
+			}
 
 			// if ((currentDumpstep % 1) == 0 && (nFreeVolumeCounts <= 25))
 			// {
@@ -176,13 +177,13 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 			// 	nFreeVolumeCounts++;
 			// }
 
-			// if (((currentDumpstep % 5) == 0) && (nHBondComputeCounts <= 20))
+			// if (((currentDumpstep % 5) == 0) && (nHBondComputeCounts <= 400))
 			// {
 			// 	computeHBonding (dumpAtoms, bonds, datafile, dumpfile, peakInfo, nPeaks, inputVectors, entries, peakHBondPosition, currentDumpstep, nThreads);
 			// 	nHBondComputeCounts++;
 			// }
 
-			// if (((currentDumpstep % 5) == 0) && (nMSDComputeCounts <= 500))
+			// if (((currentDumpstep % 5) == 0) && (nMSDComputeCounts <= 400))
 			// {
 			// 	computeMSD (datafile, dumpAtoms, bonds, dumpfile, currentDumpstep, &initCoords, &msdVars, nPeaks, inputVectors);
 			// 	nMSDComputeCounts++;
@@ -216,15 +217,38 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 
 		if ((currentLine > 9) && (currentLine < (9 + dumpfile.nAtoms)))
 		{	
-			sscanf (lineString, "%d %d %f %f %f %*f %*f %*f %d %d %d\n",
+			// Use the following line if the input dump file contains unscaled coordinates as input
+			// sscanf (lineString, "%d %d %f %f %f %*f %*f %*f %d %d %d\n",
+			// 	&dumpAtoms[currentLine - 10].id,
+			// 	&dumpAtoms[currentLine - 10].atomType,
+			// 	&dumpAtoms[currentLine - 10].x,
+			// 	&dumpAtoms[currentLine - 10].y,
+			// 	&dumpAtoms[currentLine - 10].z,
+			// 	&dumpAtoms[currentLine - 10].ix,
+			// 	&dumpAtoms[currentLine - 10].iy,
+			// 	&dumpAtoms[currentLine - 10].iz);
+
+			// The following lines can be used if the trajectory dump file contains scaled coordinates
+			// Uncomment the following lines if unscaled coordinates are given
+			sscanf (lineString, "%d %d %lf %lf %lf %d %d %d\n",
 				&dumpAtoms[currentLine - 10].id,
 				&dumpAtoms[currentLine - 10].atomType,
-				&dumpAtoms[currentLine - 10].x,
-				&dumpAtoms[currentLine - 10].y,
-				&dumpAtoms[currentLine - 10].z,
+				&x_temp,
+				&y_temp,
+				&z_temp,
 				&dumpAtoms[currentLine - 10].ix,
 				&dumpAtoms[currentLine - 10].iy,
 				&dumpAtoms[currentLine - 10].iz);
+
+			x_temp *= (double) xDist;
+			y_temp *= (double) yDist;
+			z_temp *= (double) zDist;
+
+			dumpAtoms[currentLine - 10].x = (float) x_temp + dumpfile.xlo;
+			dumpAtoms[currentLine - 10].y = (float) y_temp + dumpfile.ylo;
+			dumpAtoms[currentLine - 10].z = (float) z_temp + dumpfile.zlo;
+
+			x_temp = 0; y_temp = 0; z_temp = 0;
 
 			currentAtomID = dumpAtoms[currentLine - 10].id;
 
