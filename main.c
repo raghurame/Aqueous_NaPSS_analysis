@@ -63,7 +63,22 @@ int main (int argc, char const *argv[])
 		exit (1);
 	}
 
-	inputDumpFile = fopen (inputDumpFilename, "r");
+	char *pipeString;
+	pipeString = (char *) malloc (200 * sizeof (char));
+	int isXZ = 0;
+
+	if (strstr (inputDumpFilename, ".xz"))
+	{
+		snprintf (pipeString, 200, "xzcat %s", inputDumpFilename);
+		inputDumpFile = popen (pipeString, "r");
+		isXZ = 1;
+	}
+	else
+	{
+		inputDumpFile = fopen (inputDumpFilename, "r");
+		isXZ = 0;
+	}
+
 	inputDataFile = fopen (inputDataFilename, "r");
 	inputConfigFile = fopen ("bondRDF.config", "r");
 	inputFreevolumeConfigFile = fopen ("freeVolume.config", "r");
@@ -94,11 +109,9 @@ int main (int argc, char const *argv[])
 
 	entries.nLines_inputVectors = nLines_inputVectors; entries.nLines_freeVolumeconfig = nLines_freeVolumeconfig; entries.nLines_vwdSize = nLines_vwdSize; entries.nLines_HBondAtoms = nLines_HBondAtoms;
 
-	processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors, freeVolumeconfig, vwdSize, entries, nThreads);
-
+	// processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors, freeVolumeconfig, vwdSize, entries, nThreads);
 	// computeHBondCorrelation (inputDumpFile, nThreads);
-
-	// computeACFOfBondRDF (inputDumpFile);
+	computeACFOfBondRDF (inputDumpFile);
 
 	free (atoms);
 	free (bonds);
