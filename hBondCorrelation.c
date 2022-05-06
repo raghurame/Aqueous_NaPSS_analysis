@@ -272,7 +272,7 @@ float *calculateAverageCorrelation (float *sumCorrelation, int nFiles, int nTime
 	return avgCorrelation;
 }
 
-void computeHBondCorrelation2 (const char *fileTemplate, int nTimeframes, int nThreads)
+void computeHBondCorrelation2 (const char *fileTemplate, int nTimeframes, int nThreads, int nFiles_0)
 {
 	// Create two float arrays, with size equal to the number of timesteps in dump file
 	float *avgCorrelation, *sumCorrelation, *correlation;
@@ -295,6 +295,9 @@ void computeHBondCorrelation2 (const char *fileTemplate, int nTimeframes, int nT
 			calculateSumCorrelation (correlation, &sumCorrelation, nTimeframes);
 			nFiles++;
 		}
+
+		if (nFiles >= nFiles_0)
+			break;
 	}
 
 	avgCorrelation = calculateAverageCorrelation (sumCorrelation, nFiles, nTimeframes);
@@ -352,11 +355,11 @@ void computeHBondCorrelation (FILE *inputDumpFile, int nThreads)
 	printf("Number of files in layer 3: %d\n", nFiles_2);
 
 	// Calculate correlation between 1st and 2nd layers (0_hBond.log)
-	computeHBondCorrelation2 ("0_hBond.log", nTimeframes, nThreads);
+	computeHBondCorrelation2 ("0_hBond.log", nTimeframes, nThreads, nFiles_0);
 	// Calculate correlation between 2nd and 3rd layers (1_hBond.log)
-	computeHBondCorrelation2 ("1_hBond.log", nTimeframes, nThreads);
+	computeHBondCorrelation2 ("1_hBond.log", nTimeframes, nThreads, nFiles_0);
 	// Calculate correlation between 3rd and 4th layers (2_hBond.log)
-	computeHBondCorrelation2 ("2_hBond.log", nTimeframes, nThreads);
+	computeHBondCorrelation2 ("2_hBond.log", nTimeframes, nThreads, nFiles_0);
 }
 
 void computeHBonding (DATA_ATOMS *dumpAtoms, DATA_BONDS *bonds, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, BOUNDS *peakInfo, int nPeaks, CONFIG *inputVectors, NLINES_CONFIG entries, float peakHBondPosition, int currentDumpstep, int nThreads)
