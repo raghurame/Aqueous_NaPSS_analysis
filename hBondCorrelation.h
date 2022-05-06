@@ -12,5 +12,6 @@ void computeHBonding (DATA_ATOMS *dumpAtoms, DATA_BONDS *bonds, DATAFILE_INFO da
 BOUNDS *getHBondPeakInformation (FILE *msdConfig_file, int nPeaks);
 float getHBondPeakPosition ();
 void initializeHBondNetworkLogfile ();
+int countNFiles (const char *fileTemplate);
 
 #endif

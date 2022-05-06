@@ -33,22 +33,31 @@ def getOnlyNegative (inputData):
 def computeTotalArea (inputData):
 	inputNumpy = n.array (inputData)
 	# showPlot (inputNumpy, "Unmodified ACF plot", "Time lag", "ACF")
-	totalArea = n.trapz (inputNumpy, dx = 1)
+	totalArea = n.trapz (inputNumpy, dx = 0.5)
 	return totalArea
 
 def computePositiveArea (inputData):
 	inputData = getOnlyPositive (inputData)
 	inputNumpy = n.array (inputData)
 	# showPlot (inputNumpy, "Positive area", "Time lag", "ACF")
-	positiveArea = n.trapz (inputNumpy, dx = 1)
+	positiveArea = n.trapz (inputNumpy, dx = 0.5)
 	return positiveArea
 
 def computeNegativeArea (inputData):
 	inputData = getOnlyNegative (inputData)
 	inputNumpy = n.array (inputData)
 	# showPlot (inputNumpy, "Negative area", "Time lag", "ACF")
-	negativeArea = n.trapz (inputNumpy, dx = 1)
+	negativeArea = n.trapz (inputNumpy, dx = 0.5)
 	return negativeArea
+
+def keepFirstPositive (column2):
+	column2_firstPositive = []
+
+	for x in range (0, len (column2), 1):
+		if (column2[x] <= 0):
+			for y in range (0, x, 1):
+				column2_firstPositive.append (column2[y])
+			return column2_firstPositive
 
 def processRDFfiles (inputFilename):
 	column1 = []
@@ -59,8 +68,10 @@ def processRDFfiles (inputFilename):
 			column1.append (float ((line.split (",")[0]).replace ("\n", "")))
 			column2.append (float ((line.split (",")[1]).replace ("\n", "")))
 
+	column2_firstPositive = keepFirstPositive (column2)
+
 	totalArea = computeTotalArea (column2)
-	positiveArea = computePositiveArea (column2)
+	positiveArea = computePositiveArea (column2_firstPositive)
 	negativeArea = computeNegativeArea (column2)
 
 	with open ("RDF_AUC.output", "a") as outputFile:
@@ -96,6 +107,15 @@ def multiPlot (list1, label1, list2, label2, list3, label3, list4, label4, xLabe
 	plt.show ()
 
 def getDistribution (list_col1, list_posArea, list_negArea, list_totArea):
+
+	peak1_min = 2.5
+	peak1_max = 5.0
+	peak2_min = 5.0
+	peak2_max = 8.6
+	peak3_min = 8.6
+	peak3_max = 12.2
+	peak4_min = 12.2
+
 	nElements = len (list_totArea)
 	maxPosValue = max (list_posArea)
 	maxNegValue = max (list_negArea)
@@ -128,13 +148,13 @@ def getDistribution (list_col1, list_posArea, list_negArea, list_totArea):
 		binHigh = binLow + binSizeTot
 		for y in range (len (list_totArea)):
 			if list_totArea[y] < binHigh and list_totArea[y] > binLow:
-				if list_col1[y] > 0 and list_col1[y] <= 1.9:
+				if list_col1[y] > peak1_min and list_col1[y] <= peak1_max:
 					distTot_peak1[x] += 1
-				elif list_col1[y] > 1.9 and list_col1[y] <= 4:
+				elif list_col1[y] > peak2_min and list_col1[y] <= peak2_max:
 					distTot_peak2[x] += 1
-				elif list_col1[y] > 4 and list_col1[y] <= 6.6:
+				elif list_col1[y] > peak3_min and list_col1[y] <= peak3_max:
 					distTot_peak3[x] += 1
-				elif list_col1[y] > 6.6:
+				elif list_col1[y] > peak4_min:
 					distTot_peak4[x] += 1
 		binLow = binHigh
 
@@ -144,13 +164,13 @@ def getDistribution (list_col1, list_posArea, list_negArea, list_totArea):
 		binHigh = binLow + binSizePos
 		for y in range (len (list_posArea)):
 			if list_posArea[y] < binHigh and list_posArea[y] > binLow:
-				if list_col1[y] > 0 and list_col1[y] <= 1.9:
+				if list_col1[y] > peak1_min and list_col1[y] <= peak1_max:
 					distPos_peak1[x] += 1
-				elif list_col1[y] > 1.9 and list_col1[y] <= 4:
+				elif list_col1[y] > peak2_min and list_col1[y] <= peak2_max:
 					distPos_peak2[x] += 1
-				elif list_col1[y] > 4 and list_col1[y] <= 6.6:
+				elif list_col1[y] > peak3_min and list_col1[y] <= peak3_max:
 					distPos_peak3[x] += 1
-				elif list_col1[y] > 6.6:
+				elif list_col1[y] > peak4_min:
 					distPos_peak4[x] += 1
 		binLow = binHigh
 
@@ -160,13 +180,13 @@ def getDistribution (list_col1, list_posArea, list_negArea, list_totArea):
 		binHigh = binLow + binSizeNeg
 		for y in range (len (list_negArea)):
 			if list_negArea[y] < binHigh and list_negArea[y] > binLow:
-				if list_col1[y] > 0 and list_col1[y] <= 1.9:
+				if list_col1[y] > peak1_min and list_col1[y] <= peak1_max:
 					distNeg_peak1[x] += 1
-				elif list_col1[y] > 1.9 and list_col1[y] <= 4:
+				elif list_col1[y] > peak2_min and list_col1[y] <= peak2_max:
 					distNeg_peak2[x] += 1
-				elif list_col1[y] > 4 and list_col1[y] <= 6.6:
+				elif list_col1[y] > peak3_min and list_col1[y] <= peak3_max:
 					distNeg_peak3[x] += 1
-				elif list_col1[y] > 6.6:
+				elif list_col1[y] > peak4_min:
 					distNeg_peak4[x] += 1
 		binLow = binHigh
 
@@ -180,35 +200,45 @@ def getDistribution (list_col1, list_posArea, list_negArea, list_totArea):
 	distPos_peak3 = normalizeDistribution (distPos_peak3)
 	distPos_peak4 = normalizeDistribution (distPos_peak4)
 
+	with open ("bondRDF_AUC.output", "w") as bondRDFAUCfile:
+		for x in range (0, nBinsPos, 1):
+			bondRDFAUCfile.write ("{}, {}, {}, {}\n".format (distPos_peak1[x], distPos_peak2[x], distPos_peak3[x], distPos_peak4[x]))
+
 	# distNeg_peak1 = normalizeDistribution (distNeg_peak1)
 	# distNeg_peak2 = normalizeDistribution (distNeg_peak2)
 	# distNeg_peak3 = normalizeDistribution (distNeg_peak3)
 	# distNeg_peak4 = normalizeDistribution (distNeg_peak4)
 
-	distTotP1Numpy = n.array (distTot_peak1)
-	distTotP2Numpy = n.array (distTot_peak2)
-	distTotP3Numpy = n.array (distTot_peak3)
-	distTotP4Numpy = n.array (distTot_peak4)
+	# distTotP1Numpy = n.array (distTot_peak1)
+	# distTotP2Numpy = n.array (distTot_peak2)
+	# distTotP3Numpy = n.array (distTot_peak3)
+	# distTotP4Numpy = n.array (distTot_peak4)
+
 	distPosP1Numpy = n.array (distPos_peak1)
 	distPosP2Numpy = n.array (distPos_peak2)
 	distPosP3Numpy = n.array (distPos_peak3)
 	distPosP4Numpy = n.array (distPos_peak4)
-	distNegP1Numpy = n.array (distNeg_peak1)
-	distNegP2Numpy = n.array (distNeg_peak2)
-	distNegP3Numpy = n.array (distNeg_peak3)
-	distNegP4Numpy = n.array (distNeg_peak4)
+
+	# distNegP1Numpy = n.array (distNeg_peak1)
+	# distNegP2Numpy = n.array (distNeg_peak2)
+	# distNegP3Numpy = n.array (distNeg_peak3)
+	# distNegP4Numpy = n.array (distNeg_peak4)
+
 	# showPlot (distTotP1Numpy, "Distribution: Total area - Peak 1", "Area", "Freq")
 	# showPlot (distTotP2Numpy, "Distribution: Total area - Peak 2", "Area", "Freq")
 	# showPlot (distTotP3Numpy, "Distribution: Total area - Peak 3", "Area", "Freq")
-	showPlot (distPosP1Numpy, "Distribution: Positive area - Peak 1", "Area", "Freq")
-	showPlot (distPosP2Numpy, "Distribution: Positive area - Peak 2", "Area", "Freq")
-	showPlot (distPosP3Numpy, "Distribution: Positive area - Peak 3", "Area", "Freq")
-	showPlot (distPosP4Numpy, "Distribution: Positive area - Bulk", "Area", "Freq")
+
+	# showPlot (distPosP1Numpy, "Distribution: Positive area - Peak 1", "Area", "Freq")
+	# showPlot (distPosP2Numpy, "Distribution: Positive area - Peak 2", "Area", "Freq")
+	# showPlot (distPosP3Numpy, "Distribution: Positive area - Peak 3", "Area", "Freq")
+	# showPlot (distPosP4Numpy, "Distribution: Positive area - Bulk", "Area", "Freq")
+
 	# showPlot (distNegP1Numpy, "Distribution: Negative area - Peak 1", "Area", "Freq")
 	# showPlot (distNegP2Numpy, "Distribution: Negative area - Peak 2", "Area", "Freq")
 	# showPlot (distNegP3Numpy, "Distribution: Negative area - Peak 3", "Area", "Freq")
 
 	multiPlot (distPosP1Numpy, "peak 1", distPosP2Numpy, "peak 2", distPosP3Numpy, "peak 3", distPosP4Numpy, "peak 4", "Area Distribution", "Freq", "ACF of Dipole Distances - Positive Area")
+
 
 def main ():
 	list_col1 = []

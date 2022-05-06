@@ -332,6 +332,9 @@ DUMPFILE_INFO getDumpFileInfo (FILE *inputDumpFile)
 		}
 	}
 
+	// Checking the information
+	// printf("Timestep: %d\nNumber of atoms: %d\nxlo: %f; xhi: %f\nylo: %f; yhi: %f\nzlo: %f; zhi: %f\n", dumpfile.timestep, dumpfile.nAtoms, dumpfile.xlo, dumpfile.xhi, dumpfile.ylo, dumpfile.yhi, dumpfile.zlo, dumpfile.zhi);
+
 	rewind (inputDumpFile);
 	return dumpfile;
 }

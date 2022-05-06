@@ -61,7 +61,7 @@ void storeLogfileInfo (char *logFilename, ALL_DATA_BONDRDF_ACF **fullData, int n
 LOGFILES_VARIABLES_BONDRDF_ACF openLogFiles (FILE *mainDumpfile, ALL_DATA_BONDRDF_ACF **fullData)
 {
 	char lineString[1000], *logFilename;
-	int isTimeline = 0, currentTimeframe;
+	int isTimeline = 0, currentTimeframe, counter = 0;
 
 	LOGFILES_VARIABLES_BONDRDF_ACF fileVars;
 	fileVars.currentTrajCount = 0;
@@ -78,11 +78,12 @@ LOGFILES_VARIABLES_BONDRDF_ACF openLogFiles (FILE *mainDumpfile, ALL_DATA_BONDRD
 
 			if (isFileExists (logFilename))
 			{
+				counter++;
 				fileVars.nLines = findNlines (logFilename);
 				fileVars.nLinesTotal += fileVars.nLines;
 				(*fullData) = (ALL_DATA_BONDRDF_ACF *) realloc ((*fullData), fileVars.nLinesTotal * sizeof (ALL_DATA_BONDRDF_ACF));
 				storeLogfileInfo (logFilename, &(*fullData), fileVars.nLines, fileVars.currentTrajCount);
-				printf("reading file: %s     \r", logFilename);
+				fprintf(stdout, "reading file: %s (count: %d)    \r", logFilename, counter);
 				fflush (stdout);
 				fileVars.currentTrajCount++;
 
@@ -97,6 +98,9 @@ LOGFILES_VARIABLES_BONDRDF_ACF openLogFiles (FILE *mainDumpfile, ALL_DATA_BONDRD
 
 		if (strstr (lineString, "ITEM: TIMESTEP"))
 			isTimeline = 1;
+
+		if (counter >= 150)
+			break;
 	}
 
 	earlyExit:
@@ -188,19 +192,19 @@ void computeACF (LOGFILES_VARIABLES_BONDRDF_ACF fileVars, ALL_DATA_BONDRDF_ACF *
 
 		// printing the acf function
 		// printing acf function for first peak
-		lowerLimit = 0; upperLimit = 5.2;
+		lowerLimit = 2.5; upperLimit = 5.0;
 		printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
 
 		// printing acf function for second peak
-		lowerLimit = 5.2; upperLimit = 10;
+		lowerLimit = 5.0; upperLimit = 8.6;
 		printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
 
 		// printing acf function for third peak
-		lowerLimit = 10; upperLimit = 15;
+		lowerLimit = 8.6; upperLimit = 12.2;
 		printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
 
 		// printing acf function beyond third peak for comparison
-		lowerLimit = 15; upperLimit = 20;
+		lowerLimit = 12.2; upperLimit = 15.8;
 		printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
 	}
 }

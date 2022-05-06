@@ -289,7 +289,8 @@ void computeHBondCorrelation2 (const char *fileTemplate, int nTimeframes, int nT
 	{
 		if (isFile(filePointer -> d_name) && strstr(filePointer -> d_name, fileTemplate))
 		{
-			printf("%s\n", filePointer -> d_name);
+			printf("Checking (for %s) file: %d        \r", fileTemplate, nFiles);
+			fflush (stdout);
 			correlation = findHBondCorrelation (filePointer -> d_name, nTimeframes, nThreads);
 			calculateSumCorrelation (correlation, &sumCorrelation, nTimeframes);
 			nFiles++;
@@ -318,12 +319,37 @@ void computeHBondCorrelation2 (const char *fileTemplate, int nTimeframes, int nT
 	}
 
 	fclose (bondCorrelation_File);
+	// free (correlation);
+	// free (avgCorrelation);
+	// free (sumCorrelation);
+}
+
+int countNFiles (const char *fileTemplate)
+{
+	struct dirent *filePointer;
+	DIR *parentDirectory;
+	parentDirectory = opendir ("./hBondNetwork_logs/");
+
+	int nFiles = 0;
+
+	while ((filePointer = readdir (parentDirectory)))
+	{
+		if (isFile(filePointer -> d_name) && strstr(filePointer -> d_name, fileTemplate))
+			nFiles++;
+	}
+
+	return nFiles;
 }
 
 void computeHBondCorrelation (FILE *inputDumpFile, int nThreads)
 {
 	// Check the number of timesteps in dump file
 	int nTimeframes = countNTimeframes (inputDumpFile);
+	int nFiles_0 = countNFiles ("0_hBond.log"), nFiles_1 = countNFiles ("1_hBond.log"), nFiles_2 = countNFiles ("2_hBond.log");
+
+	printf("Number of files in layer 1: %d\n", nFiles_0);
+	printf("Number of files in layer 2: %d\n", nFiles_1);
+	printf("Number of files in layer 3: %d\n", nFiles_2);
 
 	// Calculate correlation between 1st and 2nd layers (0_hBond.log)
 	computeHBondCorrelation2 ("0_hBond.log", nTimeframes, nThreads);
