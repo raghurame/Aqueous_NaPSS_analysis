@@ -81,9 +81,9 @@ LOGFILES_VARIABLES_BONDRDF_ACF openLogFiles (FILE *mainDumpfile, ALL_DATA_BONDRD
 				counter++;
 				fileVars.nLines = findNlines (logFilename);
 				fileVars.nLinesTotal += fileVars.nLines;
-				(*fullData) = (ALL_DATA_BONDRDF_ACF *) realloc ((*fullData), fileVars.nLinesTotal * sizeof (ALL_DATA_BONDRDF_ACF));
+				(*fullData) = (ALL_DATA_BONDRDF_ACF *) realloc ((*fullData), (fileVars.nLinesTotal + 100) * sizeof (ALL_DATA_BONDRDF_ACF));
 				storeLogfileInfo (logFilename, &(*fullData), fileVars.nLines, fileVars.currentTrajCount);
-				fprintf(stdout, "reading file: %s (count: %d)    \r", logFilename, counter);
+				fprintf(stdout, "reading file: %s (count: %d; nLines: %lld)    \n", logFilename, counter, fileVars.nLines);
 				fflush (stdout);
 				fileVars.currentTrajCount++;
 
@@ -114,14 +114,16 @@ void printACF (int i, float *originalDistance, float *acf, int currentTrajCount,
 	if ((originalDistance[0] < upperLimit) && (originalDistance[0] > lowerLimit))
 	{
 		char *acfOutput_filename;
-		acfOutput_filename = (char *) malloc (50 * sizeof (char));
+		acfOutput_filename = (char *) malloc (100 * sizeof (char));
 
 		FILE *acfOutput_file;
-		snprintf (acfOutput_filename, 50, "bondRDF_processed/processed_%d.rdf", i);
+		snprintf (acfOutput_filename, 100, "bondRDF_processed/processed_%d_%.4f.rdf", i, originalDistance[0]);
 		acfOutput_file = fopen (acfOutput_filename, "w");
 
 		for (int j = 0; j < currentTrajCount; ++j)
 		{
+			// fprintf(stdout, "%.3f, %.3f\n", originalDistance[j], acf[j]);
+			// sleep (1);
 			fprintf(acfOutput_file, "%.3f, %.3f\n", originalDistance[j], acf[j]);
 		}
 		fclose (acfOutput_file);
@@ -140,72 +142,86 @@ void computeACF (LOGFILES_VARIABLES_BONDRDF_ACF fileVars, ALL_DATA_BONDRDF_ACF *
 
 	float lowerLimit, upperLimit;
 
+	printf("Computing autocorrelation function...\n");
 	// 'i' denotes the bond pairs
 	for (int i = 0; i < fileVars.nLines; ++i)
 	{
 		mean = 0; covariance = 0;
+		printf("Printing bond-pair: %d/%d           \r", i, fileVars.nLines);
+		fflush (stdout);
 
-		// 'j' denotes the time frame for every bond pair
-		// computing mean bond-bond distance
-		for (int j = 0; j < fileVars.currentTrajCount; ++j)
+		// TO DO:
+		// ~~~~~
+		// 
+		// Restrict the length of timeseries to 100 (or a variable) for calculating autocorrelation function
+		// modify the for loop as, (int j = variable; j < variable + 100; j++), for (int variable = 0; variable < fileVars.currentTrajCount - 100; variable++).
+		//  Implementing this requires another layer of 'for' loop
+
+		for (int tstart = 0; tstart < (fileVars.currentTrajCount - 100); ++tstart)
 		{
-			index1d = getIndex1d (j, i, fileVars.nLines);
-			mean += fullData[index1d].distance;
-		}
-		mean /= fileVars.currentTrajCount;
-
-		// computing covariance of bond-bond distance series
-		for (int j = 0; j < fileVars.currentTrajCount; ++j)
-		{
-			index1d = getIndex1d (j, i, fileVars.nLines);
-			covariance_var = fullData[index1d].distance - mean;
-			covariance += pow ((fullData[index1d].distance - mean), 2);
-		}
-		covariance /= fileVars.currentTrajCount;
-
-		// subtracting mean from every point
-		for (int j = 0; j < fileVars.currentTrajCount; ++j)
-		{
-			index1d = getIndex1d (j, i, fileVars.nLines);
-			originalDistance[j] = fullData[index1d].distance;
-			fullData[index1d].distance -= mean;
-		}
-
-		// computing autocorrelation
-		// in this loop, 'j' is the timelag
-		for (int j = 0; j < fileVars.currentTrajCount; ++j)
-		{
-			acf[j] = 0;
-
-			// iterating through all the elements
-			for (int k = 0; k < (fileVars.currentTrajCount - j); ++k)
+			// 'j' denotes the time frame for every bond pair
+			// computing mean bond-bond distance
+			for (int j = tstart; j < (tstart + 100); ++j)
 			{
-				index1d = getIndex1d (k, i, fileVars.nLines);
-				index1d_2 = getIndex1d (k + j, i, fileVars.nLines);
-				acf[j] += (fullData[index1d].distance * fullData[index1d_2].distance);
+				index1d = getIndex1d (j, i, fileVars.nLines);
+				mean += fullData[index1d].distance;
+			}
+			mean /= fileVars.currentTrajCount;
+			
+			// computing covariance of bond-bond distance series
+			for (int j = tstart; j < (tstart + 100); ++j)
+			{
+				index1d = getIndex1d (j, i, fileVars.nLines);
+				covariance_var = fullData[index1d].distance - mean;
+				covariance += pow ((fullData[index1d].distance - mean), 2);
+			}
+			covariance /= fileVars.currentTrajCount;
+
+			// subtracting mean from every point
+			for (int j = tstart; j < (tstart + 100); ++j)
+			{
+				index1d = getIndex1d (j, i, fileVars.nLines);
+				originalDistance[j] = fullData[index1d].distance;
+				fullData[index1d].distance -= mean;
 			}
 
-			acf[j] /= fileVars.currentTrajCount;
-			acf[j] /= covariance;
-			// index1d = getIndex1d (j, i, fileVars.nLines);
+			// computing autocorrelation
+			// in this loop, 'j' is the timelag
+			for (int j = tstart; j < (tstart + 100); ++j)
+			{
+				acf[j] = 0;
+
+				// iterating through all the elements
+				for (int k = tstart; k < (tstart + 100 - j); ++k)
+				{
+					index1d = getIndex1d (k, i, fileVars.nLines);
+					index1d_2 = getIndex1d (k + j, i, fileVars.nLines);
+					acf[j] += (fullData[index1d].distance * fullData[index1d_2].distance);
+				}
+
+				acf[j] /= fileVars.currentTrajCount;
+				acf[j] /= covariance;
+				// index1d = getIndex1d (j, i, fileVars.nLines);
+			}
+
+			// printing the acf function
+			// printing acf function for first peak
+			lowerLimit = 2.5; upperLimit = 5.0;
+			printACF (i, originalDistance, acf, 100, lowerLimit, upperLimit);
+
+			// printing acf function for second peak
+			lowerLimit = 5.0; upperLimit = 8.6;
+			printACF (i, originalDistance, acf, 100, lowerLimit, upperLimit);
+
+			// printing acf function for third peak
+			lowerLimit = 8.6; upperLimit = 12.2;
+			printACF (i, originalDistance, acf, 100, lowerLimit, upperLimit);
+
+			// printing acf function beyond third peak for comparison
+			lowerLimit = 12.2; upperLimit = 15.8;
+			printACF (i, originalDistance, acf, 100, lowerLimit, upperLimit);
 		}
 
-		// printing the acf function
-		// printing acf function for first peak
-		lowerLimit = 2.5; upperLimit = 5.0;
-		printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
-
-		// printing acf function for second peak
-		lowerLimit = 5.0; upperLimit = 8.6;
-		printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
-
-		// printing acf function for third peak
-		lowerLimit = 8.6; upperLimit = 12.2;
-		printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
-
-		// printing acf function beyond third peak for comparison
-		lowerLimit = 12.2; upperLimit = 15.8;
-		printACF (i, originalDistance, acf, fileVars.currentTrajCount, lowerLimit, upperLimit);
 	}
 }
 
