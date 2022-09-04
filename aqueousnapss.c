@@ -19,10 +19,10 @@
 #include "bondRDF.h"
 #include "meanSquareDisplacement.h"
 
-void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS *bonds, CONFIG *inputVectors, CONFIG *freeVolumeconfig, CONFIG *vwdSize, NLINES_CONFIG entries, int nThreads)
+void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DUMPFILE_INFO dumpfile, DATA_BONDS *bonds, CONFIG *inputVectors, CONFIG *freeVolumeconfig, CONFIG *vwdSize, NLINES_CONFIG entries, int nThreads)
 {
-	DUMPFILE_INFO dumpfile;
-	dumpfile = getDumpFileInfo (inputDumpFile);
+	// DUMPFILE_INFO dumpfile;
+	// dumpfile = getDumpFileInfo (inputDumpFile);
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	// Variables for plotting the distribution
@@ -216,45 +216,51 @@ void processLAMMPSTraj (FILE *inputDumpFile, DATAFILE_INFO datafile, DATA_BONDS 
 		}
 
 		if ((currentLine > 9) && (currentLine < (9 + dumpfile.nAtoms)))
-		{	
+		{
 			// Use the following line if the input dump file contains unscaled coordinates as input
-			// sscanf (lineString, "%d %d %f %f %f %*f %*f %*f %d %d %d\n",
-			// 	&dumpAtoms[currentLine - 10].id,
-			// 	&dumpAtoms[currentLine - 10].atomType,
-			// 	&dumpAtoms[currentLine - 10].x,
-			// 	&dumpAtoms[currentLine - 10].y,
-			// 	&dumpAtoms[currentLine - 10].z,
-			// 	&dumpAtoms[currentLine - 10].ix,
-			// 	&dumpAtoms[currentLine - 10].iy,
-			// 	&dumpAtoms[currentLine - 10].iz);
-
-			// The following lines can be used if the trajectory dump file contains scaled coordinates
-			// Uncomment the following lines if unscaled coordinates are given
-			sscanf (lineString, "%d %d %lf %lf %lf %d %d %d\n",
+			sscanf (lineString, "%d %d %f %f %f %*f %*f %*f %d %d %d\n",
 				&dumpAtoms[currentLine - 10].id,
 				&dumpAtoms[currentLine - 10].atomType,
-				&x_temp,
-				&y_temp,
-				&z_temp,
+				&dumpAtoms[currentLine - 10].x,
+				&dumpAtoms[currentLine - 10].y,
+				&dumpAtoms[currentLine - 10].z,
 				&dumpAtoms[currentLine - 10].ix,
 				&dumpAtoms[currentLine - 10].iy,
 				&dumpAtoms[currentLine - 10].iz);
 
-			x_temp *= (double) xDist;
-			y_temp *= (double) yDist;
-			z_temp *= (double) zDist;
+			// The following lines can be used if the trajectory dump file contains scaled coordinates
+			// Uncomment the following lines if unscaled coordinates are given
 
-			dumpAtoms[currentLine - 10].x = (float) x_temp + dumpfile.xlo;
-			dumpAtoms[currentLine - 10].y = (float) y_temp + dumpfile.ylo;
-			dumpAtoms[currentLine - 10].z = (float) z_temp + dumpfile.zlo;
+			// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			// sscanf (lineString, "%d %d %lf %lf %lf %d %d %d\n",
+			// 	&dumpAtoms[currentLine - 10].id,
+			// 	&dumpAtoms[currentLine - 10].atomType,
+			// 	&x_temp,
+			// 	&y_temp,
+			// 	&z_temp,
+			// 	&dumpAtoms[currentLine - 10].ix,
+			// 	&dumpAtoms[currentLine - 10].iy,
+			// 	&dumpAtoms[currentLine - 10].iz);
 
-			x_temp = 0; y_temp = 0; z_temp = 0;
+			// x_temp *= (double) xDist;
+			// y_temp *= (double) yDist;
+			// z_temp *= (double) zDist;
+
+			// dumpAtoms[currentLine - 10].x = (float) x_temp + dumpfile.xlo;
+			// dumpAtoms[currentLine - 10].y = (float) y_temp + dumpfile.ylo;
+			// dumpAtoms[currentLine - 10].z = (float) z_temp + dumpfile.zlo;
+
+			// x_temp = 0; y_temp = 0; z_temp = 0;
+
+			// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 			currentAtomID = dumpAtoms[currentLine - 10].id;
 
 			if (currentAtomID != (previousAtomID + 1))
 			{
 				printf("Fault found in lammpstrj. This timeframe will be ignored !\n");
+				printf("lineString ==> %s\n", lineString);
+				printf("previousAtomID: %d; currentAtomID: %d\n", previousAtomID, currentAtomID);
 				fault++;
 			}
 			previousAtomID = currentAtomID;

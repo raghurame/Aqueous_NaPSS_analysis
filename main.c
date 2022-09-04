@@ -109,9 +109,18 @@ int main (int argc, char const *argv[])
 
 	entries.nLines_inputVectors = nLines_inputVectors; entries.nLines_freeVolumeconfig = nLines_freeVolumeconfig; entries.nLines_vwdSize = nLines_vwdSize; entries.nLines_HBondAtoms = nLines_HBondAtoms;
 
-	// processLAMMPSTraj (inputDumpFile, datafile, bonds, inputVectors, freeVolumeconfig, vwdSize, entries, nThreads);
+	// Rewind the input dump file
+	if (strstr (inputDumpFilename, ".xz")) {
+		fclose (inputDumpFile);
+		FILE *inputDumpFile;
+		inputDumpFile = 
+		inputDumpFile = popen (pipeString, "r"); }
+	else {
+		rewind (inputDumpFile);	}
+
+	processLAMMPSTraj (inputDumpFile, datafile, dumpfile, bonds, inputVectors, freeVolumeconfig, vwdSize, entries, nThreads);
 	// computeHBondCorrelation (inputDumpFile, nThreads);
-	computeACFOfBondRDF (inputDumpFile);
+	// computeACFOfBondRDF (inputDumpFile);
 
 	free (atoms);
 	free (bonds);
